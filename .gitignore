@@ -1,0 +1,13 @@
+﻿venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pth
+*.h5
+*.pt
+*.keras
+model/
+database/mood_history.db
+output.txt
+.env
+*.log
