@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-/* ═══════════════════════════════════════════════════════════
-   EmoStudyAI — script.js
-   All JS logic for the dashboard
-═══════════════════════════════════════════════════════════ */
 
-/* ─── STATE ──────────────────────────────────────────────── */
 let currentEmotion    = 'neutral';
 let currentConf       = 0;
 let detectionCount    = 0;
@@ -15,7 +9,6 @@ let confHistory       = [];
 let lastEnrichEmotion = '';
 let trendChart, pieChart, barChart, confChart;
 
-/* ─── EMOTION CONFIG ─────────────────────────────────────── */
 const EMOTIONS = {
   happy:    { emoji: '😊', color: '#ffd166', label: 'Happy' },
   sad:      { emoji: '😢', color: '#6c9fff', label: 'Sad' },
@@ -79,9 +72,7 @@ const PAGE_TITLES = {
   tips:      'Study Tips'
 };
 
-/* ═══════════════════════════════════════════════════════════
-   NAVIGATION
-═══════════════════════════════════════════════════════════ */
+
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -100,9 +91,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
 
 document.getElementById('goto-camera').addEventListener('click', () => navigate('camera'));
 
-/* ═══════════════════════════════════════════════════════════
-   SESSION TIMER
-═══════════════════════════════════════════════════════════ */
+
 setInterval(() => {
   sessionSeconds++;
   const m = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
@@ -110,9 +99,7 @@ setInterval(() => {
   document.getElementById('stat-time').textContent = `${m}:${s}`;
 }, 1000);
 
-/* ═══════════════════════════════════════════════════════════
-   EMOTION POLLING  — calls /get_emotion every 2 seconds
-═══════════════════════════════════════════════════════════ */
+
 async function pollEmotion() {
   try {
     const res  = await fetch('/get_emotion');
@@ -125,9 +112,6 @@ async function pollEmotion() {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   UPDATE UI WITH NEW EMOTION
-═══════════════════════════════════════════════════════════ */
 function updateEmotion(emotion, conf) {
   const cfg = EMOTIONS[emotion] || EMOTIONS.neutral;
   currentEmotion = emotion;
@@ -176,19 +160,16 @@ function updateEmotion(emotion, conf) {
   });
   if (historyData.length > 50) historyData.pop();
 
-  /* Update recommendations */
+  
   renderRecs(emotion);
 
-  /* Fetch AI/video/quote only when emotion changes */
   if (emotion !== lastEnrichEmotion) {
     lastEnrichEmotion = emotion;
     fetchEnrichment(emotion, conf);
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   EMOTION METER
-═══════════════════════════════════════════════════════════ */
+
 function updateMeter(activeEmotion, conf) {
   const list = document.getElementById('meter-list');
   list.innerHTML = Object.entries(EMOTIONS).map(([key, cfg]) => {
@@ -206,9 +187,7 @@ function updateMeter(activeEmotion, conf) {
 
 updateMeter('neutral', 0);
 
-/* ═══════════════════════════════════════════════════════════
-   RECOMMENDATIONS
-═══════════════════════════════════════════════════════════ */
+
 function renderRecs(emotion) {
   const recs = RECOMMENDATIONS[emotion] || RECOMMENDATIONS.neutral;
   document.getElementById('rec-list').innerHTML = recs.map(r =>
@@ -222,10 +201,7 @@ document.getElementById('refresh-recs-btn').addEventListener('click', () => {
   renderRecs(currentEmotion);
 });
 
-/* ═══════════════════════════════════════════════════════════
-   ENRICHMENT API  — AI advice + quote + videos
-   calls /api/enrich (POST)
-═══════════════════════════════════════════════════════════ */
+
 async function fetchEnrichment(emotion, conf) {
   /* Show loading states */
   const adviceEl = document.getElementById('ai-advice');
@@ -263,7 +239,7 @@ async function fetchEnrichment(emotion, conf) {
   }
 }
 
-/* ─── Refresh buttons ──────────────────────────────────── */
+
 document.getElementById('refresh-quote-btn').addEventListener('click', async () => {
   try {
     const res  = await fetch('/api/enrich', {
@@ -291,7 +267,7 @@ document.getElementById('refresh-videos-btn').addEventListener('click', async ()
   } catch (e) { /* silent */ }
 });
 
-/* ─── Render video cards ───────────────────────────────── */
+
 function renderVideos(videos) {
   const grid = document.getElementById('video-grid');
   grid.innerHTML = videos.map(v => `
@@ -302,9 +278,7 @@ function renderVideos(videos) {
     </a>`).join('');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SAVE SESSION  — calls /save_session (POST)
-═══════════════════════════════════════════════════════════ */
+
 document.getElementById('save-btn').addEventListener('click', async () => {
   try {
     const res = await fetch('/save_session', {
@@ -327,9 +301,7 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   }
 });
 
-/* ═══════════════════════════════════════════════════════════
-   MOOD HISTORY PAGE
-═══════════════════════════════════════════════════════════ */
+
 function renderHistory() {
   /* Trend line chart */
   const recent = historyData.slice(0, 20).reverse();
@@ -363,7 +335,7 @@ function renderHistory() {
     }
   });
 
-  /* History table */
+ 
   const tbody = document.getElementById('history-body');
   if (!historyData.length) {
     tbody.innerHTML = '<tr><td colspan="5" class="no-data-cell">No history yet.</td></tr>';
@@ -386,9 +358,7 @@ function renderHistory() {
   }).join('');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   ANALYTICS PAGE
-═══════════════════════════════════════════════════════════ */
+
 function renderAnalytics() {
   const labels = Object.keys(emotionCounts).map(k => EMOTIONS[k]?.label || k);
   const vals   = Object.values(emotionCounts);
@@ -408,7 +378,6 @@ function renderAnalytics() {
     }
   });
 
-  /* Bar */
   if (barChart) barChart.destroy();
   barChart = new Chart(document.getElementById('bar-chart'), {
     type: 'bar',
@@ -429,7 +398,7 @@ function renderAnalytics() {
     }
   });
 
-  /* Confidence over time */
+  
   if (confChart) confChart.destroy();
   confChart = new Chart(document.getElementById('conf-chart'), {
     type: 'line',
@@ -457,9 +426,7 @@ function renderAnalytics() {
   });
 }
 
-/* ═══════════════════════════════════════════════════════════
-   STUDY TIPS PAGE
-═══════════════════════════════════════════════════════════ */
+
 function renderTips() {
   document.getElementById('tips-grid').innerHTML = Object.entries(EMOTIONS).map(([key, cfg]) => {
     const tips = RECOMMENDATIONS[key] || [];
@@ -474,9 +441,7 @@ function renderTips() {
   }).join('');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   INIT — load quote + start polling
-═══════════════════════════════════════════════════════════ */
+
 (async function init() {
   /* Load initial quote */
   try {
@@ -492,30 +457,7 @@ function renderTips() {
     }
   } catch (e) { /* silent */ }
 
-  /* Start emotion polling */
+ 
   pollEmotion();
   setInterval(pollEmotion, 2000);
 })();
-=======
-async function updateEmotion(){
-
-let response = await fetch("/emotion")
-
-let data = await response.json()
-
-document.getElementById("emotion").innerText = data.emotion
-
-let tips=document.getElementById("tips")
-
-tips.innerHTML=""
-
-data.tips.forEach(t=>{
-let li=document.createElement("li")
-li.innerText=t
-tips.appendChild(li)
-})
-
-}
-
-setInterval(updateEmotion,2000)
->>>>>>> 50806243a990f5276a5517268c84289a1eccefbd

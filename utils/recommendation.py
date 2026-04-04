@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 EMOTION_DATA = {
     "happy": {
         "message": "Great mood! Perfect time for challenging problems.",
@@ -72,75 +71,12 @@ def get_recommendation(emotion: str) -> dict:
     if data:
         return {
             "message": data["message"],
-            "tips": data["tips"],
+            "tips":    data["tips"],
             "video_query": data["video_query"]
         }
 
     return {
-        "message": "Stay focused and keep studying!",
-        "tips": ["Set clear goals.", "Take regular breaks.", "Stay hydrated."],
+        "message":     "Stay focused and keep studying!",
+        "tips":        ["Set clear goals.", "Take regular breaks.", "Stay hydrated."],
         "video_query": "study tips productivity"
     }
-=======
-def get_recommendation(emotion):
-
-    recommendations = {
-
-        "happy": {
-            "title": "High Productivity Mode",
-            "tips": [
-                "Attempt difficult problems",
-                "Start a new topic",
-                "Solve practice questions"
-            ]
-        },
-
-        "sad": {
-            "title": "Light Study Mode",
-            "tips": [
-                "Revise an easy topic",
-                "Watch a short concept video",
-                "Take a short break"
-            ]
-        },
-
-        "neutral": {
-            "title": "Balanced Study Mode",
-            "tips": [
-                "Continue normal study",
-                "Revise notes",
-                "Solve moderate questions"
-            ]
-        },
-
-        "angry": {
-            "title": "Calm Reset Mode",
-            "tips": [
-                "Take deep breaths",
-                "Pause for 3 minutes",
-                "Switch to an easier topic"
-            ]
-        },
-
-        "surprise": {
-            "title": "Quick Concept Check",
-            "tips": [
-                "Review key concepts",
-                "Attempt a quick quiz",
-                "Test your understanding"
-            ]
-        },
-
-        "disgust": {
-            "title": "Refresh Mode",
-            "tips": [
-                "Change subject",
-                "Clean study space",
-                "Try interactive learning"
-            ]
-        }
-
-    }
-
-    return recommendations.get(emotion, {})
->>>>>>> 50806243a990f5276a5517268c84289a1eccefbd
