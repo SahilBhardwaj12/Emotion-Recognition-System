@@ -1,0 +1,13 @@
+<<<<<<< HEAD
+flask>=2.3.0
+opencv-python>=4.8.0
+tensorflow>=2.13.0
+numpy>=1.24.0
+requests>=2.31.0
+=======
+flask
+opencv-python
+tensorflow
+numpy
+requests
+>>>>>>> 50806243a990f5276a5517268c84289a1eccefbd

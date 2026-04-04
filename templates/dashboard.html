@@ -1,0 +1,445 @@
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EmoStudyAI — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🧠</div>
+      EmoStudyAI
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-page="dashboard"><span class="nav-icon">⊞</span> Dashboard</button>
+      <button class="nav-item" data-page="camera"><span class="nav-icon">📷</span> Live Camera</button>
+      <button class="nav-item" data-page="history"><span class="nav-icon">📊</span> Mood History</button>
+      <button class="nav-item" data-page="analytics"><span class="nav-icon">📈</span> Analytics</button>
+      <button class="nav-item" data-page="tips"><span class="nav-icon">💡</span> Study Tips</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">A</div>
+        <div>
+          <div class="user-name">Admin User</div>
+          <div class="user-role">@admin</div>
+        </div>
+        <button class="logout-btn" title="Logout">⏻</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ────────────────────────────────────────────── -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="page-title" id="topbar-title">Dashboard</span>
+        <div class="live-badge"><div class="live-dot"></div> Live</div>
+      </div>
+      <div class="topbar-right">
+        <div class="emotion-chip">
+          <span id="chip-emoji">😐</span>
+          <span id="chip-label">Neutral</span>
+        </div>
+        <button class="save-btn" id="save-btn">💾 Save</button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         DASHBOARD PAGE
+    ═════════════════════════════════════════════════════ -->
+    <div id="page-dashboard" class="page-content page active">
+
+      <!-- Stat Cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon emotion">😐</div>
+          <div>
+            <div class="stat-label">Current Emotion</div>
+            <div class="stat-value" id="stat-emotion">Neutral</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon conf">🎯</div>
+          <div>
+            <div class="stat-label">Confidence</div>
+            <div class="stat-value" id="stat-conf">0.0%</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon time">⏱</div>
+          <div>
+            <div class="stat-label">Session Time</div>
+            <div class="stat-value" id="stat-time">00:00</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon detects">📋</div>
+          <div>
+            <div class="stat-label">Detections</div>
+            <div class="stat-value" id="stat-detects">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Grid: Camera + Right Panel -->
+      <div class="main-grid">
+
+        <!-- Camera -->
+        <div class="camera-card">
+          <div class="card-header">
+            <span class="card-title">Live Feed</span>
+            <button class="full-view-btn" id="goto-camera">Full view →</button>
+          </div>
+          <div class="camera-body">
+            <img id="camera-feed" class="camera-feed-img" src="/video_feed" alt="Live Camera"
+                 onerror="this.style.display='none';document.getElementById('cam-placeholder').style.display='flex'"/>
+            <div id="cam-placeholder" class="cam-placeholder">
+              <span style="font-size:36px">📷</span>Camera not connected
+            </div>
+            <div class="emotion-overlay">
+              <span id="overlay-emoji" style="font-size:20px">😐</span>
+              <div>
+                <div class="overlay-emotion" id="overlay-emotion">Neutral</div>
+                <div class="overlay-conf" id="overlay-conf">Confidence: 0%</div>
+              </div>
+            </div>
+          </div>
+          <div class="conf-bar-wrap">
+            <div class="conf-bar-label">
+              <span>Confidence Score</span>
+              <span id="conf-bar-pct">0%</span>
+            </div>
+            <div class="conf-bar-track">
+              <div class="conf-bar-fill" id="conf-bar-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">📚 Study Recommendation</span>
+              <button class="refresh-btn" id="refresh-recs-btn">↻ Refresh</button>
+            </div>
+            <div class="card-body">
+              <div class="rec-list" id="rec-list">
+                <div class="rec-item"><div class="rec-dot"></div>Detecting your emotion…</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">🤖 AI Study Advice</span></div>
+            <div class="card-body">
+              <div class="ai-badge">✦ Gemini AI</div>
+              <div class="ai-advice-text ai-loading" id="ai-advice">Waiting for emotion detection…</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">💬 Motivation</span>
+              <button class="refresh-btn" id="refresh-quote-btn">↻ New</button>
+            </div>
+            <div class="card-body">
+              <div class="quote-text" id="quote-text">Loading quote…</div>
+              <div class="quote-author" id="quote-author">— …</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">📡 Emotion Meter</span></div>
+            <div class="card-body">
+              <div class="meter-list" id="meter-list"></div>
+            </div>
+          </div>
+
+        </div><!-- /right-panel -->
+      </div><!-- /main-grid -->
+
+      <!-- YouTube Videos -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📺 Recommended Study Videos</span>
+          <button class="refresh-btn" id="refresh-videos-btn">↻ Refresh</button>
+        </div>
+        <div class="card-body">
+          <div class="video-grid" id="video-grid">
+            <div class="video-placeholder">Detecting emotion to find videos…</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-dashboard -->
+
+    <!-- ════════════════════════════════════════════════════
+         CAMERA PAGE
+    ═════════════════════════════════════════════════════ -->
+    <div id="page-camera" class="page-content page">
+      <div class="camera-card">
+        <div class="card-header">
+          <span class="card-title">Live Camera — Full View</span>
+          <div class="live-badge"><div class="live-dot"></div> Live</div>
+        </div>
+        <div class="camera-body" style="aspect-ratio:16/9">
+          <img class="camera-feed-img" src="/video_feed" alt="Live Feed"
+               onerror="this.style.display='none'"/>
+          <div class="emotion-overlay">
+            <span id="cam-page-emoji" style="font-size:24px">😐</span>
+            <div>
+              <div class="overlay-emotion" id="cam-page-emotion">Neutral</div>
+              <div class="overlay-conf" id="cam-page-conf">Confidence: 0%</div>
+            </div>
+          </div>
+        </div>
+        <div class="conf-bar-wrap">
+          <div class="conf-bar-label">
+            <span>Confidence</span>
+            <span id="cam-conf-pct">0%</span>
+          </div>
+          <div class="conf-bar-track">
+            <div class="conf-bar-fill" id="cam-conf-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         MOOD HISTORY PAGE
+    ═════════════════════════════════════════════════════ -->
+    <div id="page-history" class="page-content page">
+      <div class="chart-card">
+        <div class="flex-between" style="margin-bottom:16px">
+          <span class="card-title">Emotion Trend (Last 20 Detections)</span>
+        </div>
+        <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Session History</span></div>
+        <div class="card-body" style="padding:0">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Emotion</th><th>Confidence</th>
+                <th>Recommendation</th><th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <tr><td colspan="5" class="no-data-cell">No history yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         ANALYTICS PAGE
+    ═════════════════════════════════════════════════════ -->
+    <div id="page-analytics" class="page-content page">
+      <div class="analytics-grid">
+        <div class="chart-card">
+          <div class="card-title" style="margin-bottom:16px">Emotion Distribution</div>
+          <div class="chart-wrap"><canvas id="pie-chart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-title" style="margin-bottom:16px">Emotion Frequency</div>
+          <div class="chart-wrap"><canvas id="bar-chart"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="card-title" style="margin-bottom:16px">Confidence Over Time</div>
+        <div class="chart-wrap"><canvas id="conf-chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         STUDY TIPS PAGE
+    ═════════════════════════════════════════════════════ -->
+    <div id="page-tips" class="page-content page">
+      <div class="tips-grid" id="tips-grid"></div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<script src="/static/script.js"></script>
+</body>
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EmoStudy AI — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <div class="noise"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="2"/>
+          <circle cx="10" cy="12" r="2" fill="currentColor"/>
+          <circle cx="18" cy="12" r="2" fill="currentColor"/>
+          <path d="M9 17.5c1.2 2 8.8 2 10 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="brand-name">EmoStudy<strong>AI</strong></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" onclick="showPage('dashboard',this)">
+        <span class="nav-icon">🏠</span><span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" onclick="showPage('camera',this)">
+        <span class="nav-icon">📷</span><span>Live Camera</span>
+      </a>
+      <a href="#" class="nav-item" onclick="showPage('history',this)">
+        <span class="nav-icon">📊</span><span>Mood History</span>
+      </a>
+      <a href="#" class="nav-item" onclick="showPage('tips',this)">
+        <span class="nav-icon">💡</span><span>Study Tips</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="sidebar-avatar">G</div>
+        <div class="user-info">
+          <strong id="sidebar-name">Guest</strong>
+          <span id="sidebar-username">@guest</span>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Logout">⏻</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-left">
+        <h2 id="page-title">Dashboard</h2>
+        <div class="live-badge"><span class="pulse-dot"></span> Live</div>
+      </div>
+      <div class="topbar-right">
+        <div class="current-emotion-pill">
+          <span id="topbar-icon">😐</span>
+          <span id="topbar-label">Neutral</span>
+        </div>
+        <button class="save-btn-top" onclick="saveSession()">💾 Save</button>
+      </div>
+    </header>
+
+    <!-- Dashboard page -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon">😊</div><div class="stat-info"><span class="stat-label">Current Emotion</span><strong class="stat-val" id="stat-emotion">Neutral</strong></div></div>
+        <div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-info"><span class="stat-label">Confidence</span><strong class="stat-val" id="stat-conf">0%</strong></div></div>
+        <div class="stat-card"><div class="stat-icon">⏱</div><div class="stat-info"><span class="stat-label">Session Time</span><strong class="stat-val" id="stat-time">00:00</strong></div></div>
+        <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-info"><span class="stat-label">Detections</span><strong class="stat-val" id="stat-count">0</strong></div></div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card cam-preview-card">
+          <div class="card-header">
+            <span class="card-title">Live Feed</span>
+            <a href="#" onclick="showPage('camera',null)" class="card-link">Full view →</a>
+          </div>
+          <div class="cam-preview-wrap">
+            <img id="dash-video" src="/video" alt="Live feed"/>
+            <div class="cam-overlay">
+              <div class="emotion-overlay-badge" id="dash-emotion-badge">😐 NEUTRAL</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card rec-card">
+          <div class="card-header"><span class="card-title">Recommendation</span></div>
+          <div class="rec-message" id="rec-message">Analyzing your emotion...</div>
+          <ul class="tips-list" id="dash-tips">
+            <li class="tip skeleton"></li>
+            <li class="tip skeleton"></li>
+            <li class="tip skeleton"></li>
+          </ul>
+        </div>
+
+        <div class="card meter-card">
+          <div class="card-header"><span class="card-title">Emotion Meter</span></div>
+          <div class="emotion-meter" id="emotion-meter">
+            <div class="meter-row" data-emotion="Happy"><span>😊 Happy</span><div class="meter-bar"><div class="meter-fill"></div></div><span class="meter-pct">0%</span></div>
+            <div class="meter-row" data-emotion="Sad"><span>😢 Sad</span><div class="meter-bar"><div class="meter-fill"></div></div><span class="meter-pct">0%</span></div>
+            <div class="meter-row" data-emotion="Angry"><span>😠 Angry</span><div class="meter-bar"><div class="meter-fill"></div></div><span class="meter-pct">0%</span></div>
+            <div class="meter-row" data-emotion="Fear"><span>😨 Fear</span><div class="meter-bar"><div class="meter-fill"></div></div><span class="meter-pct">0%</span></div>
+            <div class="meter-row" data-emotion="Surprise"><span>😲 Surprise</span><div class="meter-bar"><div class="meter-fill"></div></div><span class="meter-pct">0%</span></div>
+            <div class="meter-row" data-emotion="Disgust"><span>🤢 Disgust</span><div class="meter-bar"><div class="meter-fill"></div></div><span class="meter-pct">0%</span></div>
+            <div class="meter-row" data-emotion="Neutral"><span>😐 Neutral</span><div class="meter-bar"><div class="meter-fill"></div></div><span class="meter-pct">0%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Camera page -->
+    <div class="page" id="page-camera">
+      <div class="card camera-full-card">
+        <div class="card-header">
+          <span class="card-title">📷 Live Camera Feed</span>
+          <div class="live-badge"><span class="pulse-dot"></span> Streaming</div>
+        </div>
+        <div class="camera-full-inner">
+          <img id="full-video" src="/video" alt="Full camera feed"/>
+        </div>
+        <div class="camera-info-row">
+          <div class="cam-info-item"><span>Emotion</span><strong id="cam-emotion">—</strong></div>
+          <div class="cam-info-item"><span>Confidence</span><strong id="cam-conf">—</strong></div>
+          <div class="cam-info-item"><span>Status</span><strong style="color:var(--green)">Active</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History page -->
+    <div class="page" id="page-history">
+      <div class="history-grid">
+        <div class="card chart-card">
+          <div class="card-header"><span class="card-title">📊 Emotion Distribution</span></div>
+          <canvas id="history-chart" height="260"></canvas>
+        </div>
+        <div class="card log-card">
+          <div class="card-header">
+            <span class="card-title">📋 Session Log</span>
+            <button class="card-link" onclick="loadHistory()">↺ Refresh</button>
+          </div>
+          <div id="history-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tips page -->
+    <div class="page" id="page-tips">
+      <div class="tips-grid" id="all-tips-grid"></div>
+    </div>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+>>>>>>> 50806243a990f5276a5517268c84289a1eccefbd
+</html>

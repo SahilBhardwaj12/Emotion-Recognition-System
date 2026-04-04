@@ -1,0 +1,276 @@
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EmoStudy AI — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+  <div class="bg-glow glow-3"></div>
+
+  <div class="login-wrap">
+
+    <div class="left-panel">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="2"/>
+            <circle cx="10" cy="12" r="2" fill="currentColor"/>
+            <circle cx="18" cy="12" r="2" fill="currentColor"/>
+            <path d="M9 17.5c1.2 2 8.8 2 10 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span>EmoStudy<strong>AI</strong></span>
+      </div>
+
+      <div class="left-content">
+        <h1>Study smarter,<br/><span class="gradient-text">feel better.</span></h1>
+        <p>Real-time emotion detection that adapts your study environment to your mental state.</p>
+        <div class="features">
+          <div class="feature">
+            <div class="feature-icon">🎯</div>
+            <div><strong>Emotion-Aware</strong><span>Detects 7 emotions in real time</span></div>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">📚</div>
+            <div><strong>Smart Tips</strong><span>Personalized study recommendations</span></div>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">📊</div>
+            <div><strong>Mood History</strong><span>Track your emotional patterns</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="left-footer">
+        <div class="stat"><strong>7</strong><span>Emotions</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><strong>Live</strong><span>Detection</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><strong>AI</strong><span>Powered</span></div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="form-card">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('login')">Sign In</button>
+          <button class="tab" onclick="switchTab('register')">Register</button>
+          <div class="tab-indicator" id="tab-indicator"></div>
+        </div>
+
+        <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label>Username</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input type="text" id="login-username" placeholder="Enter your username" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="login-password" placeholder="Enter your password" required/>
+              <button type="button" class="eye-btn" onclick="togglePwd('login-password', this)">👁</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="remember"/>
+              <span>Remember me</span>
+            </label>
+            <a href="#" class="forgot">Forgot password?</a>
+          </div>
+          <div class="error-msg" id="login-error"></div>
+          <button type="submit" class="submit-btn" id="login-btn">
+            <span>Sign In</span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9h12M9 3l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="divider"><span>or</span></div>
+          <button type="button" class="guest-btn" onclick="guestLogin()">Continue as Guest</button>
+        </form>
+
+        <form id="register-form" class="auth-form hidden" onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label>Full Name</label>
+            <div class="input-wrap">
+              <span class="input-icon">✨</span>
+              <input type="text" id="reg-name" placeholder="Your full name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Username</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input type="text" id="reg-username" placeholder="Choose a username" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="reg-password" placeholder="Create a password" required/>
+              <button type="button" class="eye-btn" onclick="togglePwd('reg-password', this)">👁</button>
+            </div>
+          </div>
+          <div class="error-msg" id="register-error"></div>
+          <button type="submit" class="submit-btn">
+            <span>Create Account</span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9h12M9 3l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='login.js') }}"></script>
+</body>
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EmoStudy AI — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+  <div class="bg-glow glow-3"></div>
+
+  <div class="login-wrap">
+
+    <div class="left-panel">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="2"/>
+            <circle cx="10" cy="12" r="2" fill="currentColor"/>
+            <circle cx="18" cy="12" r="2" fill="currentColor"/>
+            <path d="M9 17.5c1.2 2 8.8 2 10 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span>EmoStudy<strong>AI</strong></span>
+      </div>
+
+      <div class="left-content">
+        <h1>Study smarter,<br/><span class="gradient-text">feel better.</span></h1>
+        <p>Real-time emotion detection that adapts your study environment to your mental state.</p>
+        <div class="features">
+          <div class="feature">
+            <div class="feature-icon">🎯</div>
+            <div><strong>Emotion-Aware</strong><span>Detects 7 emotions in real time</span></div>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">📚</div>
+            <div><strong>Smart Tips</strong><span>Personalized study recommendations</span></div>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">📊</div>
+            <div><strong>Mood History</strong><span>Track your emotional patterns</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="left-footer">
+        <div class="stat"><strong>7</strong><span>Emotions</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><strong>Live</strong><span>Detection</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><strong>AI</strong><span>Powered</span></div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="form-card">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('login')">Sign In</button>
+          <button class="tab" onclick="switchTab('register')">Register</button>
+          <div class="tab-indicator" id="tab-indicator"></div>
+        </div>
+
+        <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label>Username</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input type="text" id="login-username" placeholder="Enter your username" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="login-password" placeholder="Enter your password" required/>
+              <button type="button" class="eye-btn" onclick="togglePwd('login-password', this)">👁</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="remember"/>
+              <span>Remember me</span>
+            </label>
+            <a href="#" class="forgot">Forgot password?</a>
+          </div>
+          <div class="error-msg" id="login-error"></div>
+          <button type="submit" class="submit-btn" id="login-btn">
+            <span>Sign In</span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9h12M9 3l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="divider"><span>or</span></div>
+          <button type="button" class="guest-btn" onclick="guestLogin()">Continue as Guest</button>
+        </form>
+
+        <form id="register-form" class="auth-form hidden" onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label>Full Name</label>
+            <div class="input-wrap">
+              <span class="input-icon">✨</span>
+              <input type="text" id="reg-name" placeholder="Your full name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Username</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input type="text" id="reg-username" placeholder="Choose a username" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="reg-password" placeholder="Create a password" required/>
+              <button type="button" class="eye-btn" onclick="togglePwd('reg-password', this)">👁</button>
+            </div>
+          </div>
+          <div class="error-msg" id="register-error"></div>
+          <button type="submit" class="submit-btn">
+            <span>Create Account</span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9h12M9 3l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='login.js') }}"></script>
+</body>
+>>>>>>> 50806243a990f5276a5517268c84289a1eccefbd
+</html>
