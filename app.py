@@ -63,6 +63,8 @@ IS_CLOUD = bool(
     os.environ.get("RENDER") or
     os.environ.get("CLOUD")
 )
+print(f"RENDER env: {os.environ.get('RENDER')}")
+print(f"IS_CLOUD: {IS_CLOUD}")
 print(f"[EmoStudyAI] Running in {'CLOUD' if IS_CLOUD else 'LOCAL'} mode")
 
 # ─────────────────────────────────────────────
