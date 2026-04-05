@@ -3,108 +3,104 @@ import cv2
 import numpy as np
 import requests
 
-model = None
+model        = None
 face_cascade = None
 
-emotion_labels = ["Surprise", "Fear", "Disgust", "Happy", "Sad", "Angry", "Neutral"]
+emotion_labels       = ["Surprise", "Fear", "Disgust", "Happy", "Sad", "Angry", "Neutral"]
 CONFIDENCE_THRESHOLD = 0.40
 
 MODEL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "model", "best_model.pth")
 )
 
-# ✅ ONLY FILE ID (NOT full link)
-GDRIVE_ID = "1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC"
+# Hugging Face — direct download, no virus warning, no redirect
+HF_URL = "https://huggingface.co/rishav21424/emostudyai-model/resolve/main/best_model.pth"
 
 
-# ─────────────────────────────
-# DOWNLOAD MODEL (FIXED)
-# ─────────────────────────────
+# ─────────────────────────────────────────────
+# MODEL DOWNLOAD
+# ─────────────────────────────────────────────
 def _ensure_model():
+    """Download model from Hugging Face if missing or too small."""
+
     if os.path.exists(MODEL_PATH):
         size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
-        if size_mb > 20:
+        if size_mb > 10:
             print(f"[Model] Found ({size_mb:.1f} MB) ✅")
             return True
         else:
+            print(f"[Model] File too small ({size_mb:.2f} MB) — re-downloading...")
             os.remove(MODEL_PATH)
 
-    print("[Model] ⬇️ Downloading from Google Drive...")
+    print("[Model] ⬇️  Downloading from Hugging Face...")
+    try:
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
 
-    def get_confirm_token(response):
-        for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
-                return value
-        return None
+        response = requests.get(HF_URL, stream=True, timeout=300)
+        response.raise_for_status()
 
-    def save_response_content(response, destination):
-        with open(destination, "wb") as f:
-            for chunk in response.iter_content(1024 * 1024):
+        total = int(response.headers.get("content-length", 0))
+        downloaded = 0
+
+        with open(MODEL_PATH, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
                 if chunk:
                     f.write(chunk)
+                    downloaded += len(chunk)
 
-    URL = "https://docs.google.com/uc?export=download"
-    session = requests.Session()
+        size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
+        print(f"[Model] ✅ Downloaded successfully ({size_mb:.1f} MB)")
+        return size_mb > 10
 
-    response = session.get(URL, params={"id": GDRIVE_ID}, stream=True)
-    token = get_confirm_token(response)
-
-    if token:
-        params = {"id": GDRIVE_ID, "confirm": token}
-        response = session.get(URL, params=params, stream=True)
-
-    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-    save_response_content(response, MODEL_PATH)
-
-    size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
-    print(f"[Model] Downloaded size: {size_mb:.1f} MB")
-
-    return size_mb > 20
+    except Exception as e:
+        print(f"[Model] ❌ Download failed: {e}")
+        return False
 
 
-# ─────────────────────────────
+# ─────────────────────────────────────────────
 # LOAD MODEL
-# ─────────────────────────────
+# ─────────────────────────────────────────────
 def load_resources():
     global model, face_cascade
 
+    # Load face detector
     if face_cascade is None:
         face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
         )
 
+    # Load emotion model
     if model is None:
         import torch
         import torch.nn as nn
         from torchvision import models as tv_models
 
         if not _ensure_model():
-            print("[Model] ❌ Download failed")
+            print("[Model] ❌ Cannot load — download failed.")
             return
 
         try:
-            print("[Model] Loading ResNet50...")
-
+            print("[Model] Loading ResNet50 architecture...")
             net = tv_models.resnet50(weights=None)
             net.fc = nn.Sequential(
                 nn.Dropout(0.4),
                 nn.Linear(net.fc.in_features, 7),
             )
-
-            net.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
+            net.load_state_dict(
+                torch.load(MODEL_PATH, map_location="cpu", weights_only=True)
+            )
             net.eval()
-
             model = net
-            print("[Model] ✅ Loaded successfully")
+            print("[Model] ✅ Model loaded and ready!")
 
         except Exception as e:
-            print(f"[Model Error] {e}")
+            print(f"[Model] ❌ Load failed: {e}")
             model = None
 
 
-# ─────────────────────────────
-# PREDICT
-# ─────────────────────────────
+# ─────────────────────────────────────────────
+# PREDICT EMOTION
+# ─────────────────────────────────────────────
 def predict_emotion(frame):
     load_resources()
 
@@ -115,19 +111,20 @@ def predict_emotion(frame):
         import torch
         from torchvision import transforms
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
+        # Detect faces
+        gray  = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(
-            gray, 1.3, 5, minSize=(30, 30)
+            gray, scaleFactor=1.3, minNeighbors=5, minSize=(30, 30)
         )
 
         if len(faces) == 0:
             return None, None
 
-        # largest face
-        faces = sorted(faces, key=lambda f: f[2]*f[3], reverse=True)
+        # Pick largest face
+        faces = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)
         x, y, w, h = faces[0]
 
+        # Crop and preprocess
         face = frame[y:y+h, x:x+w]
         face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
 
@@ -135,23 +132,28 @@ def predict_emotion(frame):
             transforms.ToPILImage(),
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406],
-                                 [0.229, 0.224, 0.225]),
+            transforms.Normalize(
+                [0.485, 0.456, 0.406],
+                [0.229, 0.224, 0.225]
+            ),
         ])
 
-        face_tensor = transform(face).unsqueeze(0)
+        face_tensor = transform(face).unsqueeze(0)  # (1, 3, 224, 224)
 
+        # Run inference
         with torch.no_grad():
-            output = model(face_tensor)
-            probs = torch.softmax(output, dim=1)
+            output        = model(face_tensor)
+            probs         = torch.softmax(output, dim=1)
+            confidence    = float(probs.max().item())
+            emotion_index = int(probs.argmax().item())
 
-            confidence = float(probs.max().item())
-            idx = int(probs.argmax().item())
-
-        emotion = emotion_labels[idx] if confidence >= CONFIDENCE_THRESHOLD else "Neutral"
+        if confidence < CONFIDENCE_THRESHOLD:
+            emotion = "Neutral"
+        else:
+            emotion = emotion_labels[emotion_index]
 
         return emotion, confidence
 
     except Exception as e:
-        print(f"[Predict Error] {e}")
+        print(f"[predict_emotion error] {e}")
         return None, None
