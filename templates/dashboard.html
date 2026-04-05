@@ -95,8 +95,10 @@
             <button class="full-view-btn" id="goto-camera">Full view →</button>
           </div>
           <div class="camera-body">
-            <img id="camera-feed" class="camera-feed-img" src="/video_feed" alt="Live Camera"
-                 onerror="this.style.display='none';document.getElementById('cam-placeholder').style.display='flex'"/>
+            <img id="camera-feed" class="camera-feed-img" 
+                src="{{ '' if is_cloud else '/video_feed' }}" 
+                alt="Live Camera"
+                onerror="this.style.display='none';document.getElementById('cam-placeholder').style.display='flex'"/>
             <div id="cam-placeholder" class="cam-placeholder">
               <span style="font-size:36px">📷</span>Camera not connected
             </div>
@@ -183,8 +185,10 @@
           <div class="live-badge"><div class="live-dot"></div> Live</div>
         </div>
         <div class="camera-body" style="aspect-ratio:16/9">
-          <img class="camera-feed-img" src="/video_feed" alt="Live Feed"
-               onerror="this.style.display='none'"/>
+          <img class="camera-feed-img" 
+              src="{{ '' if is_cloud else '/video_feed' }}" 
+              alt="Live Feed"
+              onerror="this.style.display='none'"/>
           <div class="emotion-overlay">
             <span id="cam-page-emoji" style="font-size:24px">😐</span>
             <div>
@@ -255,6 +259,5 @@
 </div>
 <script>window.IS_CLOUD = {{ 'true' if is_cloud else 'false' }};</script>
 <script src="/static/script.js"></script>
-
 </body>
 </html>
