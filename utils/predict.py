@@ -13,12 +13,12 @@ MODEL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "model", "best_model.pth")
 )
 
-# Only FILE ID
+# ✅ ONLY FILE ID (NOT full link)
 GDRIVE_ID = "1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC"
 
 
 # ─────────────────────────────
-# DOWNLOAD MODEL (NO GDOWN)
+# DOWNLOAD MODEL (FIXED)
 # ─────────────────────────────
 def _ensure_model():
     if os.path.exists(MODEL_PATH):
@@ -29,17 +29,32 @@ def _ensure_model():
         else:
             os.remove(MODEL_PATH)
 
-    print("[Model] ⬇️ Downloading...")
+    print("[Model] ⬇️ Downloading from Google Drive...")
 
-    url = f"https://drive.google.com/uc?export=download&id={GDRIVE_ID}"
+    def get_confirm_token(response):
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                return value
+        return None
+
+    def save_response_content(response, destination):
+        with open(destination, "wb") as f:
+            for chunk in response.iter_content(1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+
+    URL = "https://docs.google.com/uc?export=download"
+    session = requests.Session()
+
+    response = session.get(URL, params={"id": GDRIVE_ID}, stream=True)
+    token = get_confirm_token(response)
+
+    if token:
+        params = {"id": GDRIVE_ID, "confirm": token}
+        response = session.get(URL, params=params, stream=True)
+
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-
-    response = requests.get(url, stream=True)
-
-    with open(MODEL_PATH, "wb") as f:
-        for chunk in response.iter_content(1024 * 1024):
-            if chunk:
-                f.write(chunk)
+    save_response_content(response, MODEL_PATH)
 
     size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
     print(f"[Model] Downloaded size: {size_mb:.1f} MB")
@@ -109,6 +124,7 @@ def predict_emotion(frame):
         if len(faces) == 0:
             return None, None
 
+        # largest face
         faces = sorted(faces, key=lambda f: f[2]*f[3], reverse=True)
         x, y, w, h = faces[0]
 
