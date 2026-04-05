@@ -6,4 +6,3 @@ opencv-python-headless
 numpy
 requests
 flask-cors
-gdown>=4.7.3

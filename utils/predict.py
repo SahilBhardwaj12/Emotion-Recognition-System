@@ -13,12 +13,12 @@ MODEL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "model", "best_model.pth")
 )
 
-# ✅ GitHub Release Direct Link
+# ✅ GitHub Release URL
 MODEL_URL = "https://github.com/SahilBhardwaj12/Emotion-Recognition-System/releases/download/v1.0/best_model.pth"
 
 
 # ─────────────────────────────
-# DOWNLOAD MODEL (GITHUB)
+# DOWNLOAD MODEL
 # ─────────────────────────────
 def _ensure_model():
     if os.path.exists(MODEL_PATH):
@@ -33,7 +33,15 @@ def _ensure_model():
 
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
 
-    response = requests.get(MODEL_URL, stream=True)
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    response = requests.get(MODEL_URL, headers=headers, stream=True)
+
+    if response.status_code != 200:
+        print(f"[Model] ❌ Failed to download. Status: {response.status_code}")
+        return False
 
     with open(MODEL_PATH, "wb") as f:
         for chunk in response.iter_content(1024 * 1024):
@@ -43,7 +51,11 @@ def _ensure_model():
     size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
     print(f"[Model] Downloaded size: {size_mb:.1f} MB")
 
-    return size_mb > 20
+    if size_mb < 20:
+        print("[Model] ❌ Download failed (file too small)")
+        return False
+
+    return True
 
 
 # ─────────────────────────────
@@ -63,7 +75,7 @@ def load_resources():
         from torchvision import models as tv_models
 
         if not _ensure_model():
-            print("[Model] ❌ Download failed")
+            print("[Model] ❌ Model unavailable")
             return
 
         try:
@@ -79,7 +91,7 @@ def load_resources():
             net.eval()
 
             model = net
-            print("[Model] ✅ Loaded successfully")
+            print("[Model] ✅ Model loaded successfully")
 
         except Exception as e:
             print(f"[Model Error] {e}")
@@ -87,7 +99,7 @@ def load_resources():
 
 
 # ─────────────────────────────
-# PREDICT
+# PREDICT FUNCTION
 # ─────────────────────────────
 def predict_emotion(frame):
     load_resources()
@@ -102,13 +114,16 @@ def predict_emotion(frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         faces = face_cascade.detectMultiScale(
-            gray, 1.3, 5, minSize=(30, 30)
+            gray,
+            scaleFactor=1.3,
+            minNeighbors=5,
+            minSize=(30, 30)
         )
 
         if len(faces) == 0:
             return None, None
 
-        # largest face
+        # Largest face
         faces = sorted(faces, key=lambda f: f[2]*f[3], reverse=True)
         x, y, w, h = faces[0]
 
@@ -119,8 +134,10 @@ def predict_emotion(frame):
             transforms.ToPILImage(),
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406],
-                                 [0.229, 0.224, 0.225]),
+            transforms.Normalize(
+                [0.485, 0.456, 0.406],
+                [0.229, 0.224, 0.225]
+            ),
         ])
 
         face_tensor = transform(face).unsqueeze(0)
