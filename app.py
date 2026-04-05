@@ -19,7 +19,6 @@ from datetime import datetime
 # Must be outside if __name__ so Render/gunicorn triggers it
 # ─────────────────────────────────────────────
 def download_model():
-    # Use absolute path based on app.py location
     base_dir   = os.path.dirname(os.path.abspath(__file__))
     model_dir  = os.path.join(base_dir, "model")
     model_path = os.path.join(model_dir, "best_model.pth")
@@ -29,15 +28,24 @@ def download_model():
     if not os.path.exists(model_path):
         print("⬇️  Downloading model from Google Drive...")
         os.makedirs(model_dir, exist_ok=True)
-        import gdown
-        gdown.download(
-            "https://drive.google.com/uc?id=1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC",
-            model_path,
-            quiet=False
-        )
-        print("✅ Model downloaded successfully.")
+        try:
+            import gdown
+            gdown.download(
+                id="1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC",
+                output=model_path,
+                quiet=False,
+                fuzzy=True
+            )
+            if os.path.exists(model_path):
+                size = os.path.getsize(model_path)
+                print(f"✅ Model downloaded — size: {size} bytes")
+            else:
+                print("❌ Download failed — file not created")
+        except Exception as e:
+            print(f"❌ Download error: {e}")
     else:
-        print("✅ Model already exists — skipping download.")
+        size = os.path.getsize(model_path)
+        print(f"✅ Model already exists — size: {size} bytes")
 
 download_model()   # ← runs on both local AND Render/gunicorn
 
