@@ -1,9 +1,8 @@
 flask
 gunicorn
-torch==2.0.1
-torchvision==0.15.2
+torch
+torchvision
 opencv-python-headless
 numpy
 requests
 flask-cors
-gdown==4.7.3
