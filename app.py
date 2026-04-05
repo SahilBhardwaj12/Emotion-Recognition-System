@@ -23,29 +23,45 @@ def download_model():
     model_dir  = os.path.join(base_dir, "model")
     model_path = os.path.join(model_dir, "best_model.pth")
 
-    print(f"[Model] Checking path: {model_path}")
+    print(f"[Model] Checking path: {model_path}", flush=True)
 
     if not os.path.exists(model_path):
-        print("⬇️  Downloading model from Google Drive...")
+        print("⬇️  Downloading model...", flush=True)
         os.makedirs(model_dir, exist_ok=True)
         try:
-            import gdown
-            gdown.download(
-                id="1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC",
-                output=model_path,
-                quiet=False,
-                fuzzy=True
-            )
-            if os.path.exists(model_path):
-                size = os.path.getsize(model_path)
-                print(f"✅ Model downloaded — size: {size} bytes")
+            import requests
+            # Direct download URL for Google Drive
+            file_id = "1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC"
+            url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
+            
+            session_req = requests.Session()
+            response = session_req.get(url, stream=True, timeout=300)
+            
+            print(f"[Model] HTTP status: {response.status_code}", flush=True)
+            
+            with open(model_path, "wb") as f:
+                downloaded = 0
+                for chunk in response.iter_content(chunk_size=32768):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if downloaded % (10 * 1024 * 1024) == 0:
+                            print(f"[Model] Downloaded {downloaded // (1024*1024)}MB...", flush=True)
+
+            size = os.path.getsize(model_path)
+            print(f"[Model] Final size: {size} bytes", flush=True)
+
+            if size < 1000000:
+                print("❌ File too small — download likely failed", flush=True)
+                os.remove(model_path)
             else:
-                print("❌ Download failed — file not created")
+                print("✅ Model downloaded successfully!", flush=True)
+
         except Exception as e:
-            print(f"❌ Download error: {e}")
+            print(f"❌ Download error: {e}", flush=True)
     else:
         size = os.path.getsize(model_path)
-        print(f"✅ Model already exists — size: {size} bytes")
+        print(f"✅ Model exists — {size // (1024*1024)}MB", flush=True)
 
 download_model()   # ← runs on both local AND Render/gunicorn
 
