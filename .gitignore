@@ -1,11 +1,8 @@
 __pycache__/
 *.pyc
 *.pyo
-*.keras
-database/mood_history.db
-output.txt
+*.pyd
 .env
-*.log
 venv/
 model/
-.pth
+*.pth
