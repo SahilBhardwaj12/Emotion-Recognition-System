@@ -10,7 +10,7 @@ CONFIDENCE_THRESHOLD = 0.40
 MODEL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "model", "best_model.pth")
 )
-GDRIVE_ID = "1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC"
+GDRIVE_ID = "https://drive.google.com/file/d/1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC/view?usp=sharing"
 
 
 def _ensure_model():

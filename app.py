@@ -36,7 +36,7 @@ def download_model():
         import gdown
         os.makedirs("model", exist_ok=True)
         gdown.download(
-            "https://drive.google.com/uc?id=1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC",
+            "https://drive.google.com/file/d/1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC/view?usp=sharing",
             model_path,
             quiet=False,
             fuzzy=True
