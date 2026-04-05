@@ -87,7 +87,7 @@ def load_resources():
             )
 
             net.eval()
-            model = net
+            model = net.to("cpu")
 
             print("[Model] ✅ Model loaded successfully")
 

@@ -13,7 +13,8 @@ import os
 import base64
 import numpy as np
 from datetime import datetime
-
+import torch
+torch.set_num_threads(1)
 # ─────────────────────────────────────────────
 # Model Auto-Download (runs before anything else)
 # Must be outside if __name__ so Render/gunicorn triggers it
