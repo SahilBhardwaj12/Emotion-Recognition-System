@@ -18,7 +18,25 @@ from datetime import datetime
 # Model Auto-Download (runs before anything else)
 # Must be outside if __name__ so Render/gunicorn triggers it
 # ─────────────────────────────────────────────
-print("[Model] Using model from repository", flush=True)
+def download_model():
+    model_path = "model/best_model.pth"
+    if not os.path.exists(model_path):
+        print("⬇️  Downloading model from Google Drive...")
+        try:
+            import gdown
+            os.makedirs("model", exist_ok=True)
+            gdown.download(
+                "https://drive.google.com/uc?id=1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC",
+                model_path,
+                quiet=False
+            )
+            print("✅ Model downloaded successfully.")
+        except Exception as e:
+            print(f"❌ Model download failed: {e}")
+    else:
+        print("✅ Model already exists.")
+
+download_model()  # runs before everything else
 # ─────────────────────────────────────────────
 # Utils (imported after model is ready)
 # ─────────────────────────────────────────────
