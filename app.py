@@ -28,7 +28,8 @@ def download_model():
             gdown.download(
                 "https://drive.google.com/uc?id=1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC",
                 model_path,
-                quiet=False
+                quiet=False,
+                fuzzy=True        # ← this bypasses the virus scan warning
             )
             print("✅ Model downloaded successfully.")
         except Exception as e:
