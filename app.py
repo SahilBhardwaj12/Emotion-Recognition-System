@@ -1,7 +1,6 @@
 """
 EmoStudyAI — app.py
-Complete Flask backend — works both locally AND on Railway/cloud
-Webcam: browser-based (works on cloud) + server-based (works locally)
+Complete Flask backend — works LOCAL and CLOUD (Render/Railway)
 """
 
 from flask import Flask, render_template, Response, jsonify, request, redirect, url_for, session
@@ -15,7 +14,33 @@ import base64
 import numpy as np
 from datetime import datetime
 
-# Utils
+# ─────────────────────────────────────────────
+# Model Auto-Download (runs before anything else)
+# Must be outside if __name__ so Render/gunicorn triggers it
+# ─────────────────────────────────────────────
+def download_model():
+    model_path = "model/best_model.pth"
+    if not os.path.exists(model_path):
+        print("⬇️  Downloading model from Google Drive...")
+        try:
+            import gdown
+            os.makedirs("model", exist_ok=True)
+            gdown.download(
+                "https://drive.google.com/uc?id=1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC",
+                model_path,
+                quiet=False
+            )
+            print("✅ Model downloaded successfully.")
+        except Exception as e:
+            print(f"❌ Model download failed: {e}")
+    else:
+        print("✅ Model already exists — skipping download.")
+
+download_model()   # ← runs on both local AND Render/gunicorn
+
+# ─────────────────────────────────────────────
+# Utils (imported after model is ready)
+# ─────────────────────────────────────────────
 from utils.predict        import predict_emotion
 from utils.recommendation import get_recommendation
 from utils.database       import init_db, save_emotion, get_history, get_emotion_counts
@@ -32,8 +57,13 @@ CORS(app)
 
 USERS_FILE = "database/users.json"
 
-# Detect if running on cloud (no camera available)
-IS_CLOUD = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER") or not os.path.exists("/dev/video0") and os.name != "nt"
+# Detect cloud environment
+IS_CLOUD = bool(
+    os.environ.get("RAILWAY_ENVIRONMENT") or
+    os.environ.get("RENDER") or
+    os.environ.get("CLOUD")
+)
+print(f"[EmoStudyAI] Running in {'CLOUD' if IS_CLOUD else 'LOCAL'} mode")
 
 # ─────────────────────────────────────────────
 # Global State
@@ -49,6 +79,11 @@ current_state = {
 }
 
 # ─────────────────────────────────────────────
+# DB Init
+# ─────────────────────────────────────────────
+init_db()
+
+# ─────────────────────────────────────────────
 # User Helpers
 # ─────────────────────────────────────────────
 def load_users():
@@ -61,10 +96,12 @@ def load_users():
         save_users(default)
         return default
 
+
 def save_users(users):
     os.makedirs("database", exist_ok=True)
     with open(USERS_FILE, "w") as f:
         json.dump(users, f, indent=2)
+
 
 # ─────────────────────────────────────────────
 # Camera (local only)
@@ -78,8 +115,9 @@ def get_camera():
             camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     return camera
 
+
 def generate_frames():
-    """Server-side camera stream — only used when running locally."""
+    """Server-side MJPEG stream — local mode only."""
     cam = get_camera()
     while True:
         with camera_lock:
@@ -96,7 +134,11 @@ def generate_frames():
 
             if current_state["detections"] % 10 == 0:
                 try:
-                    save_emotion(session.get("user", "guest"), emotion, round(confidence * 100, 1))
+                    save_emotion(
+                        session.get("user", "guest"),
+                        emotion,
+                        round(confidence * 100, 1)
+                    )
                 except Exception:
                     pass
 
@@ -108,17 +150,25 @@ def generate_frames():
         ret, buffer = cv2.imencode(".jpg", frame)
         if not ret:
             continue
-        yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n")
+        yield (
+            b"--frame\r\n"
+            b"Content-Type: image/jpeg\r\n\r\n"
+            + buffer.tobytes()
+            + b"\r\n"
+        )
         time.sleep(0.05)
 
-# ─────────────────────────────────────────────
-# Auth Routes
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# AUTH ROUTES
+# ═══════════════════════════════════════════════
+
 @app.route("/")
 def index():
     if "user" not in session:
         return redirect(url_for("login"))
     return redirect(url_for("dashboard"))
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -151,6 +201,7 @@ def login():
 
     return render_template("login.html")
 
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -175,10 +226,12 @@ def register():
 
     return render_template("login.html")
 
+
 @app.route("/logout")
 def logout():
     session.pop("user", None)
     return redirect(url_for("login"))
+
 
 @app.route("/guest")
 def guest():
@@ -186,47 +239,53 @@ def guest():
     current_state["session_start"] = time.time()
     return redirect(url_for("dashboard"))
 
-# ─────────────────────────────────────────────
-# Main Pages
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# MAIN PAGES
+# ═══════════════════════════════════════════════
+
 @app.route("/dashboard")
 def dashboard():
     if "user" not in session:
         return redirect(url_for("login"))
-    return render_template("dashboard.html", user=session["user"], is_cloud=IS_CLOUD)
+    return render_template("dashboard.html",
+                           user=session["user"],
+                           is_cloud=IS_CLOUD)
 
-# ─────────────────────────────────────────────
-# Video Feed (local only)
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# VIDEO FEED (local only)
+# ═══════════════════════════════════════════════
+
 @app.route("/video_feed")
 def video_feed():
     if IS_CLOUD:
         return jsonify({"error": "Camera not available on cloud"}), 404
-    return Response(generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
+    return Response(
+        generate_frames(),
+        mimetype="multipart/x-mixed-replace; boundary=frame"
+    )
 
-# ─────────────────────────────────────────────
-# Browser Webcam — predict from base64 frame
-# This is the KEY route for cloud deployment
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# BROWSER WEBCAM — cloud mode
+# Receives base64 frame from browser, runs prediction
+# ═══════════════════════════════════════════════
+
 @app.route("/predict_frame", methods=["POST"])
 def predict_frame():
-    """
-    Receives a base64 image from the browser webcam,
-    runs emotion prediction, returns result.
-    Works on both local and cloud.
-    """
     try:
-        data = request.get_json(silent=True) or {}
+        data     = request.get_json(silent=True) or {}
         img_data = data.get("image", "")
 
         if not img_data:
             return jsonify({"error": "No image data"}), 400
 
-        # Remove base64 header if present
+        # Strip base64 header
         if "," in img_data:
             img_data = img_data.split(",")[1]
 
-        # Decode base64 to image
+        # Decode to OpenCV frame
         img_bytes = base64.b64decode(img_data)
         np_arr    = np.frombuffer(img_bytes, np.uint8)
         frame     = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
@@ -246,7 +305,9 @@ def predict_frame():
         current_state["confidence"]  = round(float(confidence) * 100, 1)
         current_state["detections"] += 1
 
-        # Save to DB every 10 detections
+        print(f"[predict_frame] {emotion} — {confidence*100:.1f}%")
+
+        # Save every 10 detections
         if current_state["detections"] % 10 == 0:
             try:
                 save_emotion(
@@ -267,9 +328,11 @@ def predict_frame():
         print(f"[predict_frame error] {e}")
         return jsonify({"error": str(e)}), 500
 
-# ─────────────────────────────────────────────
-# Emotion API
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# EMOTION API
+# ═══════════════════════════════════════════════
+
 @app.route("/get_emotion")
 def get_emotion():
     elapsed = int(time.time() - current_state["session_start"])
@@ -281,9 +344,11 @@ def get_emotion():
         "recommendation": get_recommendation(current_state["emotion"])
     })
 
-# ─────────────────────────────────────────────
-# Enrichment API
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# ENRICHMENT API (YouTube + Gemini + Quotes)
+# ═══════════════════════════════════════════════
+
 @app.route("/api/enrich", methods=["POST"])
 def enrich():
     data       = request.get_json(silent=True) or {}
@@ -291,9 +356,10 @@ def enrich():
     confidence = float(data.get("confidence", 0.0))
 
     results = {}
-    def fetch_videos(): results["videos"]   = get_study_videos(emotion)
-    def fetch_advice(): results["ai_advice"] = get_ai_study_advice(emotion, confidence)
-    def fetch_quote():  results["quote"]     = get_motivational_quote(emotion)
+
+    def fetch_videos():  results["videos"]    = get_study_videos(emotion)
+    def fetch_advice():  results["ai_advice"] = get_ai_study_advice(emotion, confidence)
+    def fetch_quote():   results["quote"]     = get_motivational_quote(emotion)
 
     threads = [
         threading.Thread(target=fetch_videos),
@@ -309,9 +375,11 @@ def enrich():
         "quote":     results.get("quote",     {"quote": "Keep going.", "author": "Unknown"}),
     })
 
-# ─────────────────────────────────────────────
-# Save Session
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# SAVE SESSION
+# ═══════════════════════════════════════════════
+
 @app.route("/save_session", methods=["POST"])
 def save_session_route():
     try:
@@ -324,9 +392,11 @@ def save_session_route():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# ─────────────────────────────────────────────
-# History & Analytics
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# HISTORY & ANALYTICS
+# ═══════════════════════════════════════════════
+
 @app.route("/get_history")
 def history():
     try:
@@ -335,6 +405,7 @@ def history():
     except Exception as e:
         return jsonify({"history": [], "error": str(e)})
 
+
 @app.route("/get_emotion_counts")
 def emotion_counts():
     try:
@@ -342,6 +413,7 @@ def emotion_counts():
         return jsonify(counts)
     except Exception:
         return jsonify({})
+
 
 @app.route("/get_emotion_meter")
 def get_emotion_meter():
@@ -352,21 +424,25 @@ def get_emotion_meter():
         meter[current] = current_state["confidence"]
     return jsonify(meter)
 
-# ─────────────────────────────────────────────
-# Health Check
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# HEALTH CHECK
+# ═══════════════════════════════════════════════
+
 @app.route("/health")
 def health():
     return jsonify({
-        "status":   "running",
-        "mode":     "cloud" if IS_CLOUD else "local",
-        "emotion":  current_state["emotion"],
-        "uptime":   int(time.time() - current_state["session_start"])
+        "status":  "running",
+        "mode":    "cloud" if IS_CLOUD else "local",
+        "emotion": current_state["emotion"],
+        "uptime":  int(time.time() - current_state["session_start"])
     })
 
-# ─────────────────────────────────────────────
-# Cleanup
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# CLEANUP
+# ═══════════════════════════════════════════════
+
 import atexit
 
 @atexit.register
@@ -375,11 +451,12 @@ def release_camera():
     if camera and camera.isOpened():
         camera.release()
 
-# ─────────────────────────────────────────────
-# Run
-# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# RUN
+# ═══════════════════════════════════════════════
+
 if __name__ == "__main__":
-    init_db()
     print("=" * 50)
     print(f"  EmoStudyAI — {'CLOUD' if IS_CLOUD else 'LOCAL'} mode")
     print("  Open: http://localhost:5000")
