@@ -20,22 +20,31 @@ from datetime import datetime
 # ─────────────────────────────────────────────
 def download_model():
     model_path = "model/best_model.pth"
-    if not os.path.exists(model_path):
-        print("⬇️  Downloading model from Google Drive...")
-        try:
-            import gdown
-            os.makedirs("model", exist_ok=True)
-            gdown.download(
-                "https://drive.google.com/uc?id=1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC",
-                model_path,
-                quiet=False,
-                fuzzy=True        # ← this bypasses the virus scan warning
-            )
-            print("✅ Model downloaded successfully.")
-        except Exception as e:
-            print(f"❌ Model download failed: {e}")
-    else:
-        print("✅ Model already exists.")
+    
+    # Check if file exists AND is actually large enough (real model is ~90MB)
+    if os.path.exists(model_path):
+        size_mb = os.path.getsize(model_path) / (1024 * 1024)
+        if size_mb > 10:  # real model is 90MB, LFS pointer is tiny
+            print(f"✅ Model already exists ({size_mb:.1f} MB) — skipping download.")
+            return
+        else:
+            print(f"⚠️  Model file is too small ({size_mb:.1f} MB) — likely LFS pointer. Re-downloading...")
+            os.remove(model_path)
+
+    print("⬇️  Downloading model from Google Drive...")
+    try:
+        import gdown
+        os.makedirs("model", exist_ok=True)
+        gdown.download(
+            "https://drive.google.com/uc?id=1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC",
+            model_path,
+            quiet=False,
+            fuzzy=True
+        )
+        size_mb = os.path.getsize(model_path) / (1024 * 1024)
+        print(f"✅ Model downloaded successfully ({size_mb:.1f} MB).")
+    except Exception as e:
+        print(f"❌ Model download failed: {e}")
 
 download_model()  # runs before everything else
 # ─────────────────────────────────────────────
