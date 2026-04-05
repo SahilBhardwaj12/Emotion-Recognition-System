@@ -1,6 +1,7 @@
 """
 EmoStudyAI — app.py
 Complete Flask backend — works LOCAL and CLOUD (Render/Railway)
+Model download handled by utils/predict.py on first prediction
 """
 
 from flask import Flask, render_template, Response, jsonify, request, redirect, url_for, session
@@ -15,41 +16,9 @@ import numpy as np
 from datetime import datetime
 import torch
 torch.set_num_threads(1)
+
 # ─────────────────────────────────────────────
-# Model Auto-Download (runs before anything else)
-# Must be outside if __name__ so Render/gunicorn triggers it
-# ─────────────────────────────────────────────
-def download_model():
-    model_path = "model/best_model.pth"
-
-    if os.path.exists(model_path):
-        size_mb = os.path.getsize(model_path) / (1024 * 1024)
-        if size_mb > 20:
-            print(f"✅ Model exists ({size_mb:.1f} MB)")
-            return
-        else:
-            os.remove(model_path)
-
-    print("⬇️ Downloading model...")
-
-    import requests
-    os.makedirs("model", exist_ok=True)
-
-    url = "https://drive.google.com/uc?export=download&id=1KAQISsqJ3wpIMdyjL3jsklSkl-m21BJC"
-
-    response = requests.get(url, stream=True)
-
-    with open(model_path, "wb") as f:
-        for chunk in response.iter_content(1024 * 1024):
-            if chunk:
-                f.write(chunk)
-
-    size_mb = os.path.getsize(model_path) / (1024 * 1024)
-    print(f"✅ Downloaded ({size_mb:.1f} MB)")
-
-download_model()  # runs before everything else
-# ─────────────────────────────────────────────
-# Utils (imported after model is ready)
+# Utils
 # ─────────────────────────────────────────────
 from utils.predict        import predict_emotion
 from utils.recommendation import get_recommendation
@@ -281,7 +250,6 @@ def video_feed():
 
 # ═══════════════════════════════════════════════
 # BROWSER WEBCAM — cloud mode
-# Receives base64 frame from browser, runs prediction
 # ═══════════════════════════════════════════════
 
 @app.route("/predict_frame", methods=["POST"])
@@ -293,11 +261,9 @@ def predict_frame():
         if not img_data:
             return jsonify({"error": "No image data"}), 400
 
-        # Strip base64 header
         if "," in img_data:
             img_data = img_data.split(",")[1]
 
-        # Decode to OpenCV frame
         img_bytes = base64.b64decode(img_data)
         np_arr    = np.frombuffer(img_bytes, np.uint8)
         frame     = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
@@ -305,21 +271,18 @@ def predict_frame():
         if frame is None:
             return jsonify({"error": "Invalid image"}), 400
 
-        # Run prediction
         emotion, confidence = predict_emotion(frame)
 
         if emotion is None:
             emotion    = "Neutral"
             confidence = 0.0
 
-        # Update global state
         current_state["emotion"]     = emotion
         current_state["confidence"]  = round(float(confidence) * 100, 1)
         current_state["detections"] += 1
 
         print(f"[predict_frame] {emotion} — {confidence*100:.1f}%")
 
-        # Save every 10 detections
         if current_state["detections"] % 10 == 0:
             try:
                 save_emotion(
@@ -358,7 +321,7 @@ def get_emotion():
 
 
 # ═══════════════════════════════════════════════
-# ENRICHMENT API (YouTube + Gemini + Quotes)
+# ENRICHMENT API
 # ═══════════════════════════════════════════════
 
 @app.route("/api/enrich", methods=["POST"])
