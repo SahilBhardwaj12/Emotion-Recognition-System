@@ -3,7 +3,10 @@ EmoStudyAI — app.py
 Complete Flask backend — works LOCAL and CLOUD (Render/Railway)
 Model download handled by utils/predict.py on first prediction
 """
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 from flask import Flask, render_template, Response, jsonify, request, redirect, url_for, session
 from flask_cors import CORS
 import cv2
