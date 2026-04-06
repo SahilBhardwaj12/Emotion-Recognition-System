@@ -416,6 +416,13 @@ def health():
         "uptime":  int(time.time() - current_state["session_start"])
     })
 
+@app.route("/warmup")
+def warmup():
+    import numpy as np
+    dummy = np.zeros((224, 224, 3), dtype=np.uint8)
+    predict_emotion(dummy)
+    return "Model warmed up"
+
 
 # ═══════════════════════════════════════════════
 # CLEANUP
