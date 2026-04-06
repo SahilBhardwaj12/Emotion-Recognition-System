@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 import requests
+import gc
 
 model        = None
 face_cascade = None
