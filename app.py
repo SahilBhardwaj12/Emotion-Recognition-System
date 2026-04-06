@@ -1,12 +1,9 @@
 """
 EmoStudyAI — app.py
 Complete Flask backend — works LOCAL and CLOUD (Render/Railway)
-Model download handled by utils/predict.py on first prediction
+Flask 3.0 compatible — no before_first_request
 """
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
 from flask import Flask, render_template, Response, jsonify, request, redirect, url_for, session
 from flask_cors import CORS
 import cv2
@@ -68,6 +65,21 @@ current_state = {
 init_db()
 
 # ─────────────────────────────────────────────
+# Warm up model in background thread
+# (Flask 3.0 compatible — no before_first_request)
+# ─────────────────────────────────────────────
+def _warmup():
+    try:
+        print("[Startup] Warming up model...")
+        dummy = np.zeros((224, 224, 3), dtype=np.uint8)
+        predict_emotion(dummy)
+        print("[Startup] ✅ Model ready")
+    except Exception as e:
+        print(f"[Startup Error] {e}")
+
+threading.Thread(target=_warmup, daemon=True).start()
+
+# ─────────────────────────────────────────────
 # User Helpers
 # ─────────────────────────────────────────────
 def load_users():
@@ -101,7 +113,6 @@ def get_camera():
 
 
 def generate_frames():
-    """Server-side MJPEG stream — local mode only."""
     cam = get_camera()
     while True:
         with camera_lock:
@@ -416,23 +427,13 @@ def health():
         "uptime":  int(time.time() - current_state["session_start"])
     })
 
+
 @app.route("/warmup")
 def warmup():
-    import numpy as np
     dummy = np.zeros((224, 224, 3), dtype=np.uint8)
     predict_emotion(dummy)
-    return "Model warmed up"
+    return jsonify({"status": "warmed up"})
 
-@app.before_first_request
-def warmup_model():
-    try:
-        print("[Startup] Warming up model...")
-        import numpy as np
-        dummy = np.zeros((224, 224, 3), dtype=np.uint8)
-        predict_emotion(dummy)
-        print("[Startup] Model ready ✅")
-    except Exception as e:
-        print(f"[Startup Error] {e}")
 
 # ═══════════════════════════════════════════════
 # CLEANUP
@@ -453,16 +454,13 @@ def release_camera():
 
 if __name__ == "__main__":
     print("=" * 50)
-    print(f"EmoStudyAI — {'CLOUD' if IS_CLOUD else 'LOCAL'}")
+    print(f"  EmoStudyAI — {'CLOUD' if IS_CLOUD else 'LOCAL'} mode")
+    print("  Open: http://localhost:5000")
     print("=" * 50)
-
-    import threading
-    threading.Thread(target=warmup_model, daemon=True).start()
-
     app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000)),
-        debug=False,
-        threaded=True,
-        use_reloader=False
+        host        = "0.0.0.0",
+        port        = int(os.environ.get("PORT", 5000)),
+        debug       = False,
+        threaded    = True,
+        use_reloader= False
     )
