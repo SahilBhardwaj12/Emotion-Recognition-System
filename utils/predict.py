@@ -65,6 +65,7 @@ def _ensure_model():
 # ─────────────────────────────────────────────
 # LOAD RESOURCES
 # ─────────────────────────────────────────────
+
 def load_resources():
     global model, face_cascade
 
@@ -77,27 +78,26 @@ def load_resources():
     if model is None:
         import torch
         import torch.nn as nn
-        from torchvision import models as tv_models
+        from torchvision import models as tvm
 
         if not _ensure_model():
             return
 
-    try:
-        net = tv_models.mobilenet_v2(weights=None)
-        net.classifier = nn.Sequential(
-            nn.Dropout(0.4),
-            nn.Linear(net.classifier[1].in_features, 7),
-        )
-        net.load_state_dict(
-            torch.load(MODEL_PATH, map_location="cpu", weights_only=True)
-        )
-        net.eval()
-        model = net
-        print("[INFO] ✅ MobileNetV2 loaded successfully.", flush=True)
+        try:
+            net = tvm.mobilenet_v2(weights=None)
+            net.classifier = nn.Sequential(
+                nn.Dropout(0.4),
+                nn.Linear(net.classifier[1].in_features, 7),
+            )
+            net.load_state_dict(
+                torch.load(MODEL_PATH, map_location="cpu", weights_only=True)
+            )
+            net.eval()
+            model = net
+            print("[INFO] ✅ MobileNetV2 loaded successfully.", flush=True)
 
-    except Exception as e:
-        print(f"[Model] ❌ Load failed: {e}", flush=True)  # ← this will show exact error
-
+        except Exception as e:
+            print(f"[Model] ❌ Load failed: {e}", flush=True)
 
 # ─────────────────────────────────────────────
 # PREDICT EMOTION
