@@ -80,25 +80,23 @@ def load_resources():
         from torchvision import models as tv_models
 
         if not _ensure_model():
-            print("[Model] ❌ Cannot load model — file missing.", flush=True)
             return
 
-        try:
-            # MobileNetV2 — lightweight (~8.8MB, ~200MB RAM)
-            net = tv_models.mobilenet_v2(weights=None)
-            net.classifier = nn.Sequential(
-                nn.Dropout(0.4),
-                nn.Linear(net.classifier[1].in_features, 7),
-            )
-            net.load_state_dict(
-                torch.load(MODEL_PATH, map_location="cpu", weights_only=True)
-            )
-            net.eval()
-            model = net
-            print("[INFO] ✅ MobileNetV2 loaded successfully.", flush=True)
+    try:
+        net = tv_models.mobilenet_v2(weights=None)
+        net.classifier = nn.Sequential(
+            nn.Dropout(0.4),
+            nn.Linear(net.classifier[1].in_features, 7),
+        )
+        net.load_state_dict(
+            torch.load(MODEL_PATH, map_location="cpu", weights_only=True)
+        )
+        net.eval()
+        model = net
+        print("[INFO] ✅ MobileNetV2 loaded successfully.", flush=True)
 
-        except Exception as e:
-            print(f"[Model] ❌ Failed to load: {e}", flush=True)
+    except Exception as e:
+        print(f"[Model] ❌ Load failed: {e}", flush=True)  # ← this will show exact error
 
 
 # ─────────────────────────────────────────────
