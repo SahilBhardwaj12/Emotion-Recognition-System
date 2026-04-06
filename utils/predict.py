@@ -21,42 +21,14 @@ MODEL_URL = "https://github.com/SahilBhardwaj12/Emotion-Recognition-System/relea
 # DOWNLOAD MODEL
 # ─────────────────────────────
 def _ensure_model():
-    if os.path.exists(MODEL_PATH):
-        size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
-        if size_mb > 20:
-            print(f"[Model] Found ({size_mb:.1f} MB) ✅")
-            return True
-        else:
-            os.remove(MODEL_PATH)
-
-    print("[Model] ⬇️ Downloading from GitHub...")
-
-    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    response = requests.get(MODEL_URL, headers=headers, stream=True)
-
-    if response.status_code != 200:
-        print(f"[Model] ❌ Failed to download. Status: {response.status_code}")
+    if not os.path.exists(MODEL_PATH):
+        print("[Model] ❌ Model file missing")
         return False
-
-    with open(MODEL_PATH, "wb") as f:
-        for chunk in response.iter_content(1024 * 1024):
-            if chunk:
-                f.write(chunk)
 
     size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
-    print(f"[Model] Downloaded size: {size_mb:.1f} MB")
-
-    if size_mb < 20:
-        print("[Model] ❌ Download failed (file too small)")
-        return False
+    print(f"[Model] Found locally ({size_mb:.1f} MB) ✅")
 
     return True
-
 
 # ─────────────────────────────
 # LOAD MODEL
