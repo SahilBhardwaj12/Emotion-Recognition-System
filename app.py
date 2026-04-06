@@ -1,3 +1,8 @@
+"""
+EmoStudyAI — app.py
+Full version (ALL FEATURES) + Flask 3 FIX + Model Warmup
+"""
+
 from dotenv import load_dotenv
 import os
 
@@ -12,11 +17,12 @@ import json
 import base64
 import numpy as np
 import torch
+from datetime import datetime
 
 torch.set_num_threads(1)
 
 # ─────────────────────────────
-# Utils
+# UTILS
 # ─────────────────────────────
 from utils.predict        import predict_emotion
 from utils.recommendation import get_recommendation
@@ -26,7 +32,7 @@ from utils.gemini_api     import get_ai_study_advice
 from utils.quotes_api     import get_motivational_quote
 
 # ─────────────────────────────
-# App Setup
+# APP SETUP
 # ─────────────────────────────
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallback_key")
@@ -45,7 +51,7 @@ print(f"IS_CLOUD: {IS_CLOUD}")
 print(f"[EmoStudyAI] Running in {'CLOUD' if IS_CLOUD else 'LOCAL'} mode")
 
 # ─────────────────────────────
-# Global State
+# GLOBAL STATE
 # ─────────────────────────────
 camera = None
 camera_lock = threading.Lock()
@@ -92,11 +98,37 @@ def get_camera():
     return camera
 
 
+def generate_frames():
+    cam = get_camera()
+    while True:
+        with camera_lock:
+            success, frame = cam.read()
+
+        if not success:
+            time.sleep(0.05)
+            continue
+
+        emotion, confidence = predict_emotion(frame)
+
+        if emotion:
+            current_state["emotion"] = emotion
+            current_state["confidence"] = confidence
+
+        ret, buffer = cv2.imencode(".jpg", frame)
+        yield (
+            b"--frame\r\n"
+            b"Content-Type: image/jpeg\r\n\r\n" +
+            buffer.tobytes() +
+            b"\r\n"
+        )
+
 # ─────────────────────────────
 # ROUTES
 # ─────────────────────────────
 @app.route("/")
 def index():
+    if "user" not in session:
+        return redirect(url_for("login"))
     return redirect(url_for("dashboard"))
 
 
@@ -128,7 +160,6 @@ def predict_frame():
         })
 
     except Exception as e:
-        print("Error:", e)
         return jsonify({"error": str(e)}), 500
 
 
@@ -154,7 +185,7 @@ def enrich():
 
 
 # ─────────────────────────────
-# 🔥 WARMUP (FIXED)
+# 🔥 WARMUP FIX (FLASK 3 SAFE)
 # ─────────────────────────────
 def warmup_model():
     try:
@@ -167,6 +198,18 @@ def warmup_model():
 
 
 # ─────────────────────────────
+# CLEANUP
+# ─────────────────────────────
+import atexit
+
+@atexit.register
+def release_camera():
+    global camera
+    if camera and camera.isOpened():
+        camera.release()
+
+
+# ─────────────────────────────
 # RUN
 # ─────────────────────────────
 if __name__ == "__main__":
@@ -174,7 +217,7 @@ if __name__ == "__main__":
     print(f"EmoStudyAI — {'CLOUD' if IS_CLOUD else 'LOCAL'}")
     print("=" * 50)
 
-    warmup_model()  # ✅ FIXED
+    warmup_model()   # ✅ FIXED
 
     app.run(
         host="0.0.0.0",
