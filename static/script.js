@@ -353,14 +353,19 @@ if (refreshVideosBtn) refreshVideosBtn.addEventListener('click', async () => {
 });
 
 function renderVideos(videos) {
-  const grid = document.getElementById('video-grid');
-  grid.innerHTML = videos.map(v => `
-    <a class="video-thumb" href="${v.url}" target="_blank" rel="noopener noreferrer">
-      <img src="${v.thumbnail}" alt="${v.title}" loading="lazy" onerror="this.style.display='none'"/>
-      <div class="video-thumb-title">${v.title}</div>
-    </a>`).join('');
-}
+    const container = document.getElementById("video-container");
 
+    container.innerHTML = "";
+
+    videos.forEach(video => {
+        container.innerHTML += `
+            <iframe src="https://www.youtube.com/embed/${video.id}"
+                frameborder="0"
+                allowfullscreen>
+            </iframe>
+        `;
+    });
+}
 /* ═══════════════════════════════════════════════════════════
    SAVE SESSION
 ═══════════════════════════════════════════════════════════ */
