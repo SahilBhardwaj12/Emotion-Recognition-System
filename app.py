@@ -364,6 +364,17 @@ def enrich():
         "quote":     results.get("quote",     {"quote": "Keep going.", "author": "Unknown"}),
     })
 
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    data       = request.get_json(silent=True) or {}
+    message    = data.get("message", "")
+    emotion    = current_state["emotion"]
+    confidence = current_state["confidence"]
+
+    from utils.gemini_api import get_chat_response
+    response = get_chat_response(message, emotion, confidence)
+    return jsonify({"response": response})
+
 
 # ═══════════════════════════════════════════════
 # SAVE SESSION

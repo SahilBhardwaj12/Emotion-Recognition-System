@@ -1,7 +1,6 @@
 {
-  "admin": "admin123",
-  "rishav21": {
-    "password": "rishav21",
-    "fullname": "Rishav"
+  "admin": {
+    "password": "admin123",
+    "fullname": "Admin User"
   }
 }

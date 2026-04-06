@@ -352,6 +352,34 @@ html, body {
   grid-column: 1/-1;
 }
 
+/* ─── chatbot ───────────────────────────────────── */
+.chat-box {
+  height: 250px;
+  overflow-y: auto;
+  background: #0f172a;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.message {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  max-width: 75%;
+}
+
+.user {
+  background: #6366f1;
+  color: white;
+  margin-left: auto;
+}
+
+.bot {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
 /* ─── BUTTONS ───────────────────────────────────────────── */
 .full-view-btn {
   background: none; border: none; color: var(--accent);

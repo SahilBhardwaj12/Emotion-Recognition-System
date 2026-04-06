@@ -60,7 +60,6 @@ Keep it under 80 words. Be encouraging."""
         result = response.json()
         text   = result["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-        # Cache it and update time
         _cached_advice[emotion] = text
         _last_call_time = time.time()
         return text
@@ -68,6 +67,27 @@ Keep it under 80 words. Be encouraging."""
     except Exception as e:
         print(f"[Gemini API Error] {e}")
         return _get_fallback_advice(emotion)
+    
+def get_chat_response(message, emotion, confidence):
+    try:
+        prompt = f"""You are EmoStudyAI — a friendly student study assistant chatbot.
+Current detected emotion: {emotion} ({confidence:.1f}% confidence)
+
+Student says: "{message}"
+
+Reply helpfully in 2-3 sentences max. Be warm, encouraging, and study-focused."""
+
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(GEMINI_URL, headers=headers,
+                                 data=json.dumps(payload), timeout=10)
+        if response.status_code != 200:
+            return _get_fallback_advice(emotion)
+        result = response.json()
+        return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except Exception as e:
+        print(f"[Chat error] {e}")
+        return "I'm here to help! Try focusing on one topic at a time."    
 
 
 def _get_fallback_advice(emotion):
