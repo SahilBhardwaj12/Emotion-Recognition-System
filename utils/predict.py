@@ -7,31 +7,24 @@ model        = None
 face_cascade = None
 
 emotion_labels       = ["Surprise", "Fear", "Disgust", "Happy", "Sad", "Angry", "Neutral"]
-CONFIDENCE_THRESHOLD = 0.40
+CONFIDENCE_THRESHOLD = 0.25  # lowered for better detection
 
 MODEL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "model", "best_model.pth")
 )
 
-# GitHub Release URL — direct download, no redirect, no virus warning
-MODEL_URL = "https://github.com/SahilBhardwaj12/Emotion-Recognition-System/releases/download/v1.0/best_model.pth"
-
-# Hugging Face fallback
-HF_URL = "https://huggingface.co/rishav21424/emostudyai-model/resolve/main/best_model.pth"
-
 
 # ─────────────────────────────────────────────
-# MODEL DOWNLOAD
+# MODEL DOWNLOAD (fallback for cloud)
 # ─────────────────────────────────────────────
 def _download_from(url, label):
-    """Download model from a URL. Returns True if successful."""
     try:
-        print(f"[Model] ⬇️  Trying {label}...")
+        print(f"[Model] ⬇️  Trying {label}...", flush=True)
         headers  = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(url, headers=headers, stream=True, timeout=300)
 
         if response.status_code != 200:
-            print(f"[Model] ❌ {label} returned HTTP {response.status_code}")
+            print(f"[Model] ❌ {label} returned HTTP {response.status_code}", flush=True)
             return False
 
         os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
@@ -41,44 +34,35 @@ def _download_from(url, label):
                     f.write(chunk)
 
         size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
-        if size_mb < 10:
-            print(f"[Model] ❌ {label} downloaded too small ({size_mb:.2f} MB)")
+        if size_mb < 1:
+            print(f"[Model] ❌ {label} too small ({size_mb:.2f} MB)", flush=True)
             os.remove(MODEL_PATH)
             return False
 
-        print(f"[Model] ✅ {label} downloaded ({size_mb:.1f} MB)")
+        print(f"[Model] ✅ {label} downloaded ({size_mb:.1f} MB)", flush=True)
         return True
 
     except Exception as e:
-        print(f"[Model] ❌ {label} failed: {e}")
+        print(f"[Model] ❌ {label} failed: {e}", flush=True)
         return False
 
 
 def _ensure_model():
-    """Make sure real model file exists. Try GitHub then HuggingFace."""
     if os.path.exists(MODEL_PATH):
         size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
-        if size_mb > 10:
-            print(f"[Model] ✅ Found ({size_mb:.1f} MB)")
+        if size_mb > 1:
+            print(f"[Model] ✅ Found ({size_mb:.1f} MB)", flush=True)
             return True
         else:
-            print(f"[Model] ⚠️  Too small ({size_mb:.2f} MB) — re-downloading...")
+            print(f"[Model] ⚠️  Too small ({size_mb:.2f} MB) — re-downloading...", flush=True)
             os.remove(MODEL_PATH)
 
-    # Try GitHub Release first
-    if _download_from(MODEL_URL, "GitHub Release"):
-        return True
-
-    # Fallback to Hugging Face
-    if _download_from(HF_URL, "Hugging Face"):
-        return True
-
-    print("[Model] ❌ All download sources failed.")
+    print("[Model] ❌ Model not found — no download sources configured.", flush=True)
     return False
 
 
 # ─────────────────────────────────────────────
-# LOAD MODEL
+# LOAD RESOURCES
 # ─────────────────────────────────────────────
 def load_resources():
     global model, face_cascade
@@ -87,7 +71,7 @@ def load_resources():
         face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
         )
-        print("[Face] ✅ Cascade loaded")
+        print("[Face] ✅ Cascade loaded", flush=True)
 
     if model is None:
         import torch
@@ -95,26 +79,25 @@ def load_resources():
         from torchvision import models as tv_models
 
         if not _ensure_model():
-            print("[Model] ❌ Cannot load — no model file.")
+            print("[Model] ❌ Cannot load model — file missing.", flush=True)
             return
 
         try:
-            print("[Model] Loading ResNet50 architecture...")
-            net = tv_models.resnet50(weights=None)
-            net.fc = nn.Sequential(
+            # MobileNetV2 — lightweight (~8.8MB, ~200MB RAM)
+            net = tv_models.mobilenet_v2(weights=None)
+            net.classifier = nn.Sequential(
                 nn.Dropout(0.4),
-                nn.Linear(net.fc.in_features, 7),
+                nn.Linear(net.classifier[1].in_features, 7),
             )
             net.load_state_dict(
                 torch.load(MODEL_PATH, map_location="cpu", weights_only=True)
             )
             net.eval()
             model = net
-            print("[Model] ✅ Model loaded and ready!")
+            print("[INFO] ✅ MobileNetV2 loaded successfully.", flush=True)
 
         except Exception as e:
-            print(f"[Model] ❌ Load failed: {e}")
-            model = None
+            print(f"[Model] ❌ Failed to load: {e}", flush=True)
 
 
 # ─────────────────────────────────────────────
@@ -171,5 +154,5 @@ def predict_emotion(frame):
         return emotion, confidence
 
     except Exception as e:
-        print(f"[predict_emotion error] {e}")
+        print(f"[predict_emotion error] {e}", flush=True)
         return None, None
