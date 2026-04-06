@@ -423,6 +423,13 @@ def warmup():
     predict_emotion(dummy)
     return "Model warmed up"
 
+@app.before_first_request
+def warmup_model():
+    print("[Startup] Warming up model...")
+    import numpy as np
+    dummy = np.zeros((224, 224, 3), dtype=np.uint8)
+    predict_emotion(dummy)
+
 
 # ═══════════════════════════════════════════════
 # CLEANUP

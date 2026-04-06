@@ -18,42 +18,91 @@ MODEL_URL = "https://github.com/SahilBhardwaj12/Emotion-Recognition-System/relea
 
 
 # ─────────────────────────────
-# DOWNLOAD MODEL
+# FAIL-PROOF MODEL ENSURE
 # ─────────────────────────────
 def _ensure_model():
-    if not os.path.exists(MODEL_PATH):
-        print("[Model] ❌ Model file missing")
+    MIN_SIZE_MB = 20
+
+    # 1. Check if exists
+    if os.path.exists(MODEL_PATH):
+        size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
+
+        if size_mb > MIN_SIZE_MB:
+            print(f"[Model] Found locally ({size_mb:.1f} MB) ✅")
+            return True
+        else:
+            print(f"[Model] Corrupted ({size_mb:.2f} MB) ❌ Re-downloading...")
+            os.remove(MODEL_PATH)
+
+    # 2. Download
+    print("[Model] ⬇️ Downloading from GitHub...")
+
+    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    try:
+        response = requests.get(MODEL_URL, headers=headers, stream=True, timeout=60)
+
+        if response.status_code != 200:
+            print(f"[Model] ❌ HTTP Error: {response.status_code}")
+            return False
+
+        with open(MODEL_PATH, "wb") as f:
+            for chunk in response.iter_content(1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+
+    except Exception as e:
+        print(f"[Model] ❌ Download failed: {e}")
         return False
 
+    # 3. Validate
     size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
-    print(f"[Model] Found locally ({size_mb:.1f} MB) ✅")
 
+    if size_mb < MIN_SIZE_MB:
+        print(f"[Model] ❌ Invalid file ({size_mb:.2f} MB)")
+        return False
+
+    print(f"[Model] ✅ Downloaded successfully ({size_mb:.1f} MB)")
     return True
 
+
 # ─────────────────────────────
-# LOAD MODEL
+# LOAD RESOURCES
 # ─────────────────────────────
 def load_resources():
     global model, face_cascade
 
+    # Load face cascade
     if face_cascade is None:
-        face_cascade = cv2.CascadeClassifier(
-            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        )
+        try:
+            face_cascade = cv2.CascadeClassifier(
+                cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+            )
+            print("[Face] Loaded ✅")
+        except Exception as e:
+            print(f"[Face Error] {e}")
+            face_cascade = None
 
+    # Load model
     if model is None:
         import torch
         import torch.nn as nn
         from torchvision import models as tv_models
 
         if not _ensure_model():
-            print("[Model] ❌ Model unavailable")
-            return
+            print("[Model] ❌ First attempt failed, retrying...")
+
+            if not _ensure_model():
+                print("[Model] ❌ Model unavailable")
+                return
 
         try:
             print("[Model] Loading ResNet50...")
 
             net = tv_models.resnet50(weights=None)
+
             net.fc = nn.Sequential(
                 nn.Dropout(0.4),
                 nn.Linear(net.fc.in_features, 7),
@@ -63,7 +112,7 @@ def load_resources():
             net.eval()
 
             model = net
-            print("[Model] ✅ Model loaded successfully")
+            print("[Model] ✅ Loaded successfully")
 
         except Exception as e:
             print(f"[Model Error] {e}")
@@ -71,7 +120,7 @@ def load_resources():
 
 
 # ─────────────────────────────
-# PREDICT FUNCTION
+# PREDICTION
 # ─────────────────────────────
 def predict_emotion(frame):
     load_resources()
@@ -95,7 +144,7 @@ def predict_emotion(frame):
         if len(faces) == 0:
             return None, None
 
-        # Largest face
+        # Select largest face
         faces = sorted(faces, key=lambda f: f[2]*f[3], reverse=True)
         x, y, w, h = faces[0]
 
