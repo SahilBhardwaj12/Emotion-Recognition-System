@@ -1,9 +1,5 @@
-/* ═══════════════════════════════════════════════════════════
-   EmoStudyAI — script.js
-   Supports both LOCAL (server webcam) and CLOUD (browser webcam)
-═══════════════════════════════════════════════════════════ */
+/* EmoStudyAI — script.js */
 
-/* ─── STATE ──────────────────────────────────────────────── */
 let currentEmotion    = 'neutral';
 let currentConf       = 0;
 let detectionCount    = 0;
@@ -14,16 +10,9 @@ let confHistory       = [];
 let lastEnrichEmotion = '';
 let trendChart, pieChart, barChart, confChart;
 
-// Cloud mode — set by dashboard.html via window.IS_CLOUD
 const IS_CLOUD = window.IS_CLOUD || false;
+let browserStream = null, browserVideo = null, browserCanvas = null;
 
-// Browser webcam variables (cloud mode)
-let browserStream     = null;
-let browserVideo      = null;
-let browserCanvas     = null;
-let predictInterval   = null;
-
-/* ─── EMOTION CONFIG ─────────────────────────────────────── */
 const EMOTIONS = {
   happy:    { emoji: '😊', color: '#ffd166', label: 'Happy' },
   sad:      { emoji: '😢', color: '#6c9fff', label: 'Sad' },
@@ -49,9 +38,7 @@ const PAGE_TITLES = {
   history: 'Mood History', analytics: 'Analytics', tips: 'Study Tips'
 };
 
-/* ═══════════════════════════════════════════════════════════
-   NAVIGATION
-═══════════════════════════════════════════════════════════ */
+/* ── NAVIGATION ── */
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -66,13 +53,10 @@ function navigate(page) {
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => navigate(btn.dataset.page));
 });
-
 const gotoCameraBtn = document.getElementById('goto-camera');
 if (gotoCameraBtn) gotoCameraBtn.addEventListener('click', () => navigate('camera'));
 
-/* ═══════════════════════════════════════════════════════════
-   SESSION TIMER
-═══════════════════════════════════════════════════════════ */
+/* ── SESSION TIMER ── */
 setInterval(() => {
   sessionSeconds++;
   const m = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
@@ -80,103 +64,45 @@ setInterval(() => {
   document.getElementById('stat-time').textContent = `${m}:${s}`;
 }, 1000);
 
-/* ═══════════════════════════════════════════════════════════
-   BROWSER WEBCAM (Cloud mode)
-   Captures frame from browser, sends to /predict_frame
-═══════════════════════════════════════════════════════════ */
+/* ── BROWSER WEBCAM ── */
 async function startBrowserWebcam() {
   try {
     browserStream = await navigator.mediaDevices.getUserMedia({ video: true });
-
-    // Create hidden video element
-    browserVideo          = document.createElement('video');
+    browserVideo = document.createElement('video');
     browserVideo.srcObject = browserStream;
-    browserVideo.autoplay  = true;
+    browserVideo.autoplay = true;
     browserVideo.playsInline = true;
     browserVideo.style.display = 'none';
     document.body.appendChild(browserVideo);
 
-    // Create hidden canvas for frame capture
     browserCanvas = document.createElement('canvas');
-    browserCanvas.width  = 640;
-    browserCanvas.height = 480;
+    browserCanvas.width = 640; browserCanvas.height = 480;
     browserCanvas.style.display = 'none';
     document.body.appendChild(browserCanvas);
 
-    // Show browser video in camera feed area
     const feedImg = document.getElementById('camera-feed');
     if (feedImg) {
-      // Replace img with video element in same position
       feedImg.style.display = 'none';
-      const videoEl = document.createElement('video');
-      videoEl.srcObject   = browserStream;
-      videoEl.autoplay    = true;
-      videoEl.playsInline = true;
-      videoEl.muted       = true;
-      videoEl.className   = 'camera-feed-img';
-      feedImg.parentNode.insertBefore(videoEl, feedImg);
+      const v = document.createElement('video');
+      v.srcObject = browserStream; v.autoplay = true;
+      v.playsInline = true; v.muted = true;
+      v.className = 'camera-feed-img';
+      feedImg.parentNode.insertBefore(v, feedImg);
     }
-
-    // Also show in camera page
     const camPageFeed = document.querySelector('#page-camera .camera-feed-img');
     if (camPageFeed) {
       camPageFeed.style.display = 'none';
-      const videoEl2 = document.createElement('video');
-      videoEl2.srcObject   = browserStream;
-      videoEl2.autoplay    = true;
-      videoEl2.playsInline = true;
-      videoEl2.muted       = true;
-      videoEl2.className   = 'camera-feed-img';
-      camPageFeed.parentNode.insertBefore(videoEl2, camPageFeed);
+      const v2 = document.createElement('video');
+      v2.srcObject = browserStream; v2.autoplay = true;
+      v2.playsInline = true; v2.muted = true;
+      v2.className = 'camera-feed-img';
+      camPageFeed.parentNode.insertBefore(v2, camPageFeed);
     }
-
-    console.log('[Camera] Browser webcam started');
-
-    // Start predicting every 2 seconds
-    await new Promise(r => setTimeout(r, 500)); // wait for video to load
-    predictInterval = setInterval(predictFromBrowser, 2000);
-
+    await new Promise(r => setTimeout(r, 500));
+    setInterval(predictFromBrowser, 2000);
   } catch (err) {
-    console.error('[Camera] Browser webcam error:', err);
-    const placeholder = document.getElementById('cam-placeholder');
-    if (placeholder) {
-      placeholder.style.display = 'flex';
-      placeholder.innerHTML = '<span style="font-size:36px">📷</span>Camera permission denied';
-    }
+    console.error('[Camera] Error:', err);
   }
-}
-
-async function sendMessage() {
-    const input   = document.getElementById("chat-input");
-    const chatBox = document.getElementById("chat-box");
-    const message = input.value.trim();
-    if (!message) return;
-
-    chatBox.innerHTML += `<div class="message user">${message}</div>`;
-    input.value = "";
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    // Show typing indicator
-    chatBox.innerHTML += `<div class="message bot" id="typing">Thinking…</div>`;
-
-    try {
-        const res = await fetch("/api/chat", {
-            method:  "POST",
-            headers: {"Content-Type": "application/json"},
-            body:    JSON.stringify({
-                message,
-                emotion:    currentEmotion,
-                confidence: currentConf * 100
-            })
-        });
-        const data = await res.json();
-        document.getElementById("typing").remove();
-        chatBox.innerHTML += `<div class="message bot">${data.response}</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-    } catch (err) {
-        document.getElementById("typing").remove();
-        chatBox.innerHTML += `<div class="message bot">Error connecting to AI</div>`;
-    }
 }
 
 async function predictFromBrowser() {
@@ -185,100 +111,71 @@ async function predictFromBrowser() {
     const ctx = browserCanvas.getContext('2d');
     ctx.drawImage(browserVideo, 0, 0, 640, 480);
     const base64 = browserCanvas.toDataURL('image/jpeg', 0.8);
-
-    const res  = await fetch('/predict_frame', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ image: base64 })
+    const res = await fetch('/predict_frame', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64 })
     });
     const data = await res.json();
-
-    if (data.emotion) {
-      updateEmotion(data.emotion.toLowerCase(), data.confidence || 0);
-    }
-  } catch (e) {
-    console.error('[predict_frame error]', e);
-  }
+    if (data.emotion) updateEmotion(data.emotion.toLowerCase(), data.confidence || 0);
+  } catch (e) {}
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SERVER WEBCAM (Local mode)
-   Polls /get_emotion every 2 seconds
-═══════════════════════════════════════════════════════════ */
+/* ── SERVER WEBCAM ── */
 async function pollEmotion() {
   try {
-    const res  = await fetch('/get_emotion');
+    const res = await fetch('/get_emotion');
     const data = await res.json();
-    if (data && data.emotion) {
-      updateEmotion(data.emotion.toLowerCase(), data.confidence || 0);
-    }
-  } catch (e) { /* silent */ }
+    if (data && data.emotion) updateEmotion(data.emotion.toLowerCase(), data.confidence || 0);
+  } catch (e) {}
 }
 
-/* ═══════════════════════════════════════════════════════════
-   UPDATE UI WITH NEW EMOTION
-═══════════════════════════════════════════════════════════ */
+/* ── UPDATE EMOTION ── */
 function updateEmotion(emotion, conf) {
   const cfg = EMOTIONS[emotion] || EMOTIONS.neutral;
-  currentEmotion = emotion;
-  currentConf    = conf;
+  currentEmotion = emotion; currentConf = conf;
 
-  // Stat cards
   document.getElementById('stat-emotion').textContent = cfg.label;
-  document.getElementById('stat-conf').textContent    = (conf * 100).toFixed(1) + '%';
-
-  // Topbar chip
+  document.getElementById('stat-conf').textContent = (conf * 100).toFixed(1) + '%';
   document.getElementById('chip-emoji').textContent = cfg.emoji;
   document.getElementById('chip-label').textContent = cfg.label;
-
-  // Overlays
-  document.getElementById('overlay-emoji').textContent   = cfg.emoji;
+  document.getElementById('overlay-emoji').textContent = cfg.emoji;
   document.getElementById('overlay-emotion').textContent = cfg.label;
-  document.getElementById('overlay-conf').textContent    = `Confidence: ${(conf * 100).toFixed(0)}%`;
-  document.getElementById('cam-page-emoji').textContent   = cfg.emoji;
+  document.getElementById('overlay-conf').textContent = `Confidence: ${(conf * 100).toFixed(0)}%`;
+  document.getElementById('cam-page-emoji').textContent = cfg.emoji;
   document.getElementById('cam-page-emotion').textContent = cfg.label;
-  document.getElementById('cam-page-conf').textContent    = `Confidence: ${(conf * 100).toFixed(0)}%`;
+  document.getElementById('cam-page-conf').textContent = `Confidence: ${(conf * 100).toFixed(0)}%`;
 
-  // Confidence bars
-  const pct = (conf * 100).toFixed(1) + '%';
+  const pct = Math.min((conf * 100), 100).toFixed(1) + '%';
   document.getElementById('conf-bar-fill').style.width = pct;
-  document.getElementById('conf-bar-pct').textContent  = pct;
+  document.getElementById('conf-bar-pct').textContent = pct;
   document.getElementById('cam-conf-fill').style.width = pct;
-  document.getElementById('cam-conf-pct').textContent  = pct;
+  document.getElementById('cam-conf-pct').textContent = pct;
 
-  // Meter
   updateMeter(emotion, conf);
 
-  // History tracking
   detectionCount++;
   document.getElementById('stat-detects').textContent = detectionCount;
   emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
   confHistory.push(+(conf * 100).toFixed(1));
 
   const recs = RECOMMENDATIONS[emotion] || RECOMMENDATIONS.neutral;
-  historyData.unshift({
-    emotion, conf,
-    recommendation: recs[0],
-    time: new Date().toLocaleTimeString()
-  });
+  historyData.unshift({ emotion, conf, recommendation: recs[0], time: new Date().toLocaleTimeString() });
   if (historyData.length > 50) historyData.pop();
 
   renderRecs(emotion);
 
-  // Fetch enrichment only when emotion changes
   if (emotion !== lastEnrichEmotion) {
     lastEnrichEmotion = emotion;
     fetchEnrichment(emotion, conf);
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   EMOTION METER
-═══════════════════════════════════════════════════════════ */
+/* ── EMOTION METER ── */
 function updateMeter(activeEmotion, conf) {
   const list = document.getElementById('meter-list');
+  if (!list) return;
   list.innerHTML = Object.entries(EMOTIONS).map(([key, cfg]) => {
-    const pct = key === activeEmotion ? (conf * 100).toFixed(0) : 0;
+    const pct = key === activeEmotion ? Math.min((conf * 100), 100).toFixed(0) : 0;
     return `
       <div class="meter-row">
         <div class="meter-label">${cfg.emoji} ${cfg.label}</div>
@@ -291,56 +188,49 @@ function updateMeter(activeEmotion, conf) {
 }
 updateMeter('neutral', 0);
 
-/* ═══════════════════════════════════════════════════════════
-   RECOMMENDATIONS
-═══════════════════════════════════════════════════════════ */
+/* ── RECOMMENDATIONS ── */
 function renderRecs(emotion) {
   const recs = RECOMMENDATIONS[emotion] || RECOMMENDATIONS.neutral;
-  document.getElementById('rec-list').innerHTML = recs.map(r =>
-    `<div class="rec-item"><div class="rec-dot"></div>${r}</div>`
-  ).join('');
+  const el = document.getElementById('rec-list');
+  if (el) el.innerHTML = recs.map(r => `<div class="rec-item"><div class="rec-dot"></div>${r}</div>`).join('');
 }
 renderRecs('neutral');
-
 const refreshRecsBtn = document.getElementById('refresh-recs-btn');
 if (refreshRecsBtn) refreshRecsBtn.addEventListener('click', () => renderRecs(currentEmotion));
 
-/* ═══════════════════════════════════════════════════════════
-   ENRICHMENT API
-═══════════════════════════════════════════════════════════ */
+/* ── ENRICHMENT API ── */
 async function fetchEnrichment(emotion, conf) {
   const adviceEl = document.getElementById('ai-advice');
-  adviceEl.textContent = 'Generating personalised advice…';
-  adviceEl.classList.add('ai-loading');
+  if (adviceEl) { adviceEl.textContent = 'Generating advice…'; adviceEl.classList.add('ai-loading'); }
   try {
-    const res  = await fetch('/api/enrich', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ emotion, confidence: conf })
+    const res = await fetch('/api/enrich', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emotion, confidence: conf })
     });
     const data = await res.json();
-    if (data.ai_advice) {
+    if (data.ai_advice && adviceEl) {
       adviceEl.textContent = data.ai_advice;
       adviceEl.classList.remove('ai-loading');
     }
     if (data.quote) {
-      document.getElementById('quote-text').textContent   = `"${data.quote.quote}"`;
-      document.getElementById('quote-author').textContent = `— ${data.quote.author}`;
+      const qt = document.getElementById('quote-text');
+      const qa = document.getElementById('quote-author');
+      if (qt) qt.textContent = `"${data.quote.quote}"`;
+      if (qa) qa.textContent = `— ${data.quote.author}`;
     }
     if (data.videos && data.videos.length) renderVideos(data.videos);
   } catch (e) {
-    adviceEl.textContent = 'AI advice unavailable.';
-    adviceEl.classList.remove('ai-loading');
+    if (adviceEl) { adviceEl.textContent = 'AI advice unavailable.'; adviceEl.classList.remove('ai-loading'); }
   }
 }
 
 const refreshQuoteBtn = document.getElementById('refresh-quote-btn');
 if (refreshQuoteBtn) refreshQuoteBtn.addEventListener('click', async () => {
   try {
-    const res  = await fetch('/api/enrich', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emotion: currentEmotion, confidence: currentConf }) });
+    const res = await fetch('/api/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emotion: currentEmotion, confidence: currentConf }) });
     const data = await res.json();
     if (data.quote) {
-      document.getElementById('quote-text').textContent   = `"${data.quote.quote}"`;
+      document.getElementById('quote-text').textContent = `"${data.quote.quote}"`;
       document.getElementById('quote-author').textContent = `— ${data.quote.author}`;
     }
   } catch (e) {}
@@ -349,62 +239,88 @@ if (refreshQuoteBtn) refreshQuoteBtn.addEventListener('click', async () => {
 const refreshVideosBtn = document.getElementById('refresh-videos-btn');
 if (refreshVideosBtn) refreshVideosBtn.addEventListener('click', async () => {
   try {
-    const res  = await fetch('/api/enrich', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emotion: currentEmotion, confidence: currentConf }) });
+    const res = await fetch('/api/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emotion: currentEmotion, confidence: currentConf }) });
     const data = await res.json();
     if (data.videos && data.videos.length) renderVideos(data.videos);
   } catch (e) {}
 });
 
+/* ── RENDER VIDEOS — thumbnail links, no iframes ── */
 function renderVideos(videos) {
-    const container = document.getElementById("video-container");
-
-    container.innerHTML = "";
-
-    videos.forEach(video => {
-        container.innerHTML += `
-            <iframe src="https://www.youtube.com/embed/${video.id}"
-                frameborder="0"
-                allowfullscreen>
-            </iframe>
-        `;
-    });
+  const grid = document.getElementById('video-grid');
+  if (!grid) return;
+  grid.innerHTML = videos.map(v => `
+    <a class="video-thumb" href="${v.url}" target="_blank" rel="noopener noreferrer">
+      <div class="video-thumb-wrap">
+        <img src="${v.thumbnail}" alt="${v.title}" loading="lazy"
+             onerror="this.src='https://img.youtube.com/vi/default/mqdefault.jpg'"/>
+        <div class="video-play-btn">▶</div>
+      </div>
+      <div class="video-thumb-title">${v.title}</div>
+    </a>`).join('');
 }
-/* ═══════════════════════════════════════════════════════════
-   SAVE SESSION
-═══════════════════════════════════════════════════════════ */
+
+/* ── AI CHAT ── */
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const chatBox = document.getElementById('chat-box');
+  const message = input.value.trim();
+  if (!message) return;
+
+  chatBox.innerHTML += `<div class="message user">${message}</div>`;
+  input.value = '';
+  chatBox.scrollTop = chatBox.scrollHeight;
+  chatBox.innerHTML += `<div class="message bot" id="typing">...</div>`;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, emotion: currentEmotion, confidence: currentConf * 100 })
+    });
+    const data = await res.json();
+    const typing = document.getElementById('typing');
+    if (typing) typing.remove();
+    chatBox.innerHTML += `<div class="message bot">${data.response}</div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+  } catch (err) {
+    const typing = document.getElementById('typing');
+    if (typing) typing.remove();
+    chatBox.innerHTML += `<div class="message bot">Error connecting to AI.</div>`;
+  }
+}
+
+// Send on Enter key
+const chatInput = document.getElementById('chat-input');
+if (chatInput) chatInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+
+/* ── SAVE SESSION ── */
 const saveBtn = document.getElementById('save-btn');
 if (saveBtn) saveBtn.addEventListener('click', async () => {
   try {
     const res = await fetch('/save_session', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ emotion: currentEmotion, confidence: currentConf, session_time: sessionSeconds, detections: detectionCount })
     });
     if (res.ok) alert('✅ Session saved!');
-    else        alert('⚠️ Save failed.');
+    else alert('⚠️ Save failed.');
   } catch (e) { alert('⚠️ Cannot connect to server.'); }
 });
 
-/* ═══════════════════════════════════════════════════════════
-   HISTORY PAGE
-═══════════════════════════════════════════════════════════ */
+/* ── HISTORY ── */
 function renderHistory() {
   const recent = historyData.slice(0, 20).reverse();
-  const labels = recent.map((_, i) => i + 1);
-  const vals   = recent.map(d => (d.conf * 100).toFixed(1));
-  const colors = recent.map(d => EMOTIONS[d.emotion]?.color || '#6c63ff');
-
   if (trendChart) trendChart.destroy();
   trendChart = new Chart(document.getElementById('trend-chart'), {
     type: 'line',
-    data: { labels, datasets: [{ label: 'Confidence %', data: vals, borderColor: '#6c63ff', backgroundColor: 'rgba(108,99,255,.1)', pointBackgroundColor: colors, pointRadius: 5, tension: 0.4, fill: true }] },
+    data: {
+      labels: recent.map((_, i) => i + 1),
+      datasets: [{ label: 'Confidence %', data: recent.map(d => (d.conf * 100).toFixed(1)), borderColor: '#6c63ff', backgroundColor: 'rgba(108,99,255,.1)', pointBackgroundColor: recent.map(d => EMOTIONS[d.emotion]?.color || '#6c63ff'), pointRadius: 5, tension: 0.4, fill: true }]
+    },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a' } }, y: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a' }, min: 0, max: 100 } } }
   });
 
   const tbody = document.getElementById('history-body');
-  if (!historyData.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="no-data-cell">No history yet.</td></tr>';
-    return;
-  }
+  if (!historyData.length) { tbody.innerHTML = '<tr><td colspan="5" class="no-data-cell">No history yet.</td></tr>'; return; }
   tbody.innerHTML = historyData.slice(0, 20).map((d, i) => {
     const cfg = EMOTIONS[d.emotion] || EMOTIONS.neutral;
     return `<tr>
@@ -417,12 +333,10 @@ function renderHistory() {
   }).join('');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   ANALYTICS PAGE
-═══════════════════════════════════════════════════════════ */
+/* ── ANALYTICS ── */
 function renderAnalytics() {
   const labels = Object.keys(emotionCounts).map(k => EMOTIONS[k]?.label || k);
-  const vals   = Object.values(emotionCounts);
+  const vals = Object.values(emotionCounts);
   const colors = Object.keys(emotionCounts).map(k => EMOTIONS[k]?.color || '#6c63ff');
 
   if (pieChart) pieChart.destroy();
@@ -447,9 +361,7 @@ function renderAnalytics() {
   });
 }
 
-/* ═══════════════════════════════════════════════════════════
-   STUDY TIPS PAGE
-═══════════════════════════════════════════════════════════ */
+/* ── STUDY TIPS ── */
 function renderTips() {
   document.getElementById('tips-grid').innerHTML = Object.entries(EMOTIONS).map(([key, cfg]) => {
     const tips = RECOMMENDATIONS[key] || [];
@@ -462,27 +374,25 @@ function renderTips() {
   }).join('');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════════════════════ */
+/* ── INIT ── */
 (async function init() {
-  // Load initial quote
   try {
-    const res  = await fetch('/api/enrich', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emotion: 'neutral', confidence: 0 }) });
+    const res = await fetch('/api/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emotion: 'neutral', confidence: 0 }) });
     const data = await res.json();
     if (data.quote) {
-      document.getElementById('quote-text').textContent   = `"${data.quote.quote}"`;
-      document.getElementById('quote-author').textContent = `— ${data.quote.author}`;
+      const qt = document.getElementById('quote-text');
+      const qa = document.getElementById('quote-author');
+      if (qt) qt.textContent = `"${data.quote.quote}"`;
+      if (qa) qa.textContent = `— ${data.quote.author}`;
     }
     if (data.videos && data.videos.length) renderVideos(data.videos);
   } catch (e) {}
 
-  // Start camera based on mode
   if (IS_CLOUD) {
-    console.log('[Mode] Cloud — using browser webcam');
+    console.log('[Mode] Cloud — browser webcam');
     await startBrowserWebcam();
   } else {
-    console.log('[Mode] Local — using server webcam');
+    console.log('[Mode] Local — server webcam');
     pollEmotion();
     setInterval(pollEmotion, 2000);
   }
