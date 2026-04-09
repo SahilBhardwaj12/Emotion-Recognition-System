@@ -367,9 +367,12 @@ def enrich():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     data       = request.get_json(silent=True) or {}
-    message    = data.get("message", "")
-    emotion    = current_state["emotion"]
-    confidence = current_state["confidence"]
+    message    = data.get("message", "").strip()
+    emotion    = data.get("emotion",    current_state["emotion"])
+    confidence = data.get("confidence", current_state["confidence"])
+
+    if not message:
+        return jsonify({"response": "Please type a message."}), 400
 
     from utils.gemini_api import get_chat_response
     response = get_chat_response(message, emotion, confidence)

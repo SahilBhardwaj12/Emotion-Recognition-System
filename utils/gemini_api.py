@@ -68,26 +68,61 @@ Keep it under 80 words. Be encouraging."""
         print(f"[Gemini API Error] {e}")
         return _get_fallback_advice(emotion)
     
+# Add this at the top of gemini_api.py
+_chat_history = []
+
 def get_chat_response(message, emotion, confidence):
+    global _chat_history
     try:
-        prompt = f"""You are EmoStudyAI — a friendly student study assistant chatbot.
-Current detected emotion: {emotion} ({confidence:.1f}% confidence)
+        # Build conversation history for context
+        contents = []
 
-Student says: "{message}"
+        # Add system context as first message
+        if not _chat_history:
+            contents.append({
+                "role": "user",
+                "parts": [{"text": f"You are EmoStudyAI — a friendly student study assistant. Current student emotion: {emotion} ({confidence:.1f}% confidence). Be warm, helpful and study-focused. Keep replies under 3 sentences."}]
+            })
+            contents.append({
+                "role": "model",
+                "parts": [{"text": "Hi! I'm your EmoStudyAI assistant. I can see how you're feeling and I'm here to help you study better. What's on your mind?"}]
+            })
 
-Reply helpfully in 2-3 sentences max. Be warm, encouraging, and study-focused."""
+        # Add previous conversation
+        contents.extend(_chat_history)
 
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        # Add current message
+        contents.append({
+            "role": "user",
+            "parts": [{"text": message}]
+        })
+
+        payload = {"contents": contents}
         headers = {"Content-Type": "application/json"}
-        response = requests.post(GEMINI_URL, headers=headers,
-                                 data=json.dumps(payload), timeout=10)
+        response = requests.post(
+            GEMINI_URL, headers=headers,
+            data=json.dumps(payload), timeout=10
+        )
+
         if response.status_code != 200:
             return _get_fallback_advice(emotion)
+
         result = response.json()
-        return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+        reply  = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+        # Save to history
+        _chat_history.append({"role": "user",  "parts": [{"text": message}]})
+        _chat_history.append({"role": "model", "parts": [{"text": reply}]})
+
+        # Keep history to last 10 messages (5 exchanges)
+        if len(_chat_history) > 10:
+            _chat_history = _chat_history[-10:]
+
+        return reply
+
     except Exception as e:
         print(f"[Chat error] {e}")
-        return "I'm here to help! Try focusing on one topic at a time."    
+        return "I'm here to help! Try focusing on one topic at a time."
 
 
 def _get_fallback_advice(emotion):
