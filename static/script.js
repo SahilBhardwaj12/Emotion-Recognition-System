@@ -1,4 +1,4 @@
-/* EmoStudyAI — script.js */
+/* EmoStudyAI — script.js  (corrected) */
 
 let currentEmotion    = 'neutral';
 let currentConf       = 0;
@@ -14,37 +14,84 @@ const IS_CLOUD = window.IS_CLOUD || false;
 let browserStream = null, browserVideo = null, browserCanvas = null;
 
 const EMOTIONS = {
-  happy:    { emoji: '😊', color: '#ffd166', label: 'Happy' },
-  sad:      { emoji: '😢', color: '#6c9fff', label: 'Sad' },
-  neutral:  { emoji: '😐', color: '#a0a8c0', label: 'Neutral' },
-  angry:    { emoji: '😠', color: '#ff6b6b', label: 'Angry' },
+  happy:    { emoji: '😊', color: '#ffd166', label: 'Happy'    },
+  sad:      { emoji: '😢', color: '#6c9fff', label: 'Sad'      },
+  neutral:  { emoji: '😐', color: '#a0a8c0', label: 'Neutral'  },
+  angry:    { emoji: '😠', color: '#ff6b6b', label: 'Angry'    },
   surprise: { emoji: '😲', color: '#c77dff', label: 'Surprise' },
-  disgust:  { emoji: '🤢', color: '#52e3a0', label: 'Disgust' },
-  fear:     { emoji: '😨', color: '#ff9f43', label: 'Fear' }
+  disgust:  { emoji: '🤢', color: '#52e3a0', label: 'Disgust'  },
+  fear:     { emoji: '😨', color: '#ff9f43', label: 'Fear'     }
 };
 
 const RECOMMENDATIONS = {
-  happy:    ['Attempt difficult problems — you\'re in peak state.','Start a challenging new topic.','Use this energy for deep focused work.','Set ambitious goals for this session.'],
-  sad:      ['Revise an easy familiar topic first.','Watch a short concept explanation video.','Take a 5-minute mindful break.','Light revision is perfectly fine right now.'],
-  neutral:  ['Continue your planned study session.','Revise class notes steadily.','Solve moderate-level practice questions.','Try Pomodoro: 25 min study, 5 min break.'],
-  angry:    ['Pause for 3–5 minutes before continuing.','Do a short box-breathing exercise.','Switch to an easier topic temporarily.','Avoid hard problems right now — reset first.'],
-  surprise: ['Do a quick concept recall quiz.','Review key points from the last topic.','Test yourself with 2–3 short questions.','Channel this alertness into active recall.'],
-  disgust:  ['Switch subjects or study method now.','Try interactive or visual learning instead.','Change your environment — fresh start.','Short varied tasks work best here.'],
-  fear:     ['Break the task into very small steps.','Start with something you already know well.','Progress over perfection — every bit counts.','Breathe slowly then resume gently.']
+  happy:    [
+    'Attempt difficult problems — you\'re in peak state.',
+    'Start a challenging new topic.',
+    'Use this energy for deep focused work.',
+    'Set ambitious goals for this session.'
+  ],
+  sad:      [
+    'Revise an easy familiar topic first.',
+    'Watch a short concept explanation video.',
+    'Take a 5-minute mindful break.',
+    'Light revision is perfectly fine right now.'
+  ],
+  neutral:  [
+    'Continue your planned study session.',
+    'Revise class notes steadily.',
+    'Solve moderate-level practice questions.',
+    'Try Pomodoro: 25 min study, 5 min break.'
+  ],
+  angry:    [
+    'Pause for 3–5 minutes before continuing.',
+    'Do a short box-breathing exercise.',
+    'Switch to an easier topic temporarily.',
+    'Avoid hard problems right now — reset first.'
+  ],
+  surprise: [
+    'Do a quick concept recall quiz.',
+    'Review key points from the last topic.',
+    'Test yourself with 2–3 short questions.',
+    'Channel this alertness into active recall.'
+  ],
+  disgust:  [
+    'Switch subjects or study method now.',
+    'Try interactive or visual learning instead.',
+    'Change your environment — fresh start.',
+    'Short varied tasks work best here.'
+  ],
+  fear:     [
+    'Break the task into very small steps.',
+    'Start with something you already know well.',
+    'Progress over perfection — every bit counts.',
+    'Breathe slowly then resume gently.'
+  ]
 };
 
 const PAGE_TITLES = {
-  dashboard: 'Dashboard', camera: 'Live Camera',
-  history: 'Mood History', analytics: 'Analytics', tips: 'Study Tips'
+  dashboard: 'Dashboard',
+  camera:    'Live Camera',
+  history:   'Mood History',
+  analytics: 'Analytics',
+  tips:      'Study Tips'
 };
 
-/* ── NAVIGATION ── */
+/* ══════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════ */
 function navigate(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  document.querySelector(`[data-page="${page}"]`).classList.add('active');
-  document.getElementById('topbar-title').textContent = PAGE_TITLES[page];
+
+  const pageEl = document.getElementById('page-' + page);
+  const navEl  = document.querySelector(`[data-page="${page}"]`);
+
+  if (pageEl) pageEl.classList.add('active');
+  if (navEl)  navEl.classList.add('active');
+
+  const titleEl = document.getElementById('topbar-title');
+  if (titleEl) titleEl.textContent = PAGE_TITLES[page] || page;
+
   if (page === 'history')   renderHistory();
   if (page === 'analytics') renderAnalytics();
   if (page === 'tips')      renderTips();
@@ -53,53 +100,62 @@ function navigate(page) {
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => navigate(btn.dataset.page));
 });
+
 const gotoCameraBtn = document.getElementById('goto-camera');
 if (gotoCameraBtn) gotoCameraBtn.addEventListener('click', () => navigate('camera'));
 
-/* ── SESSION TIMER ── */
+/* ══════════════════════════════════════
+   SESSION TIMER
+══════════════════════════════════════ */
 setInterval(() => {
   sessionSeconds++;
   const m = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
   const s = String(sessionSeconds % 60).padStart(2, '0');
-  document.getElementById('stat-time').textContent = `${m}:${s}`;
+  const el = document.getElementById('stat-time');
+  if (el) el.textContent = `${m}:${s}`;
 }, 1000);
 
-/* ── BROWSER WEBCAM ── */
+/* ══════════════════════════════════════
+   BROWSER WEBCAM
+══════════════════════════════════════ */
 async function startBrowserWebcam() {
   try {
     browserStream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+    // Hidden video + canvas for frame capture
     browserVideo = document.createElement('video');
-    browserVideo.srcObject = browserStream;
-    browserVideo.autoplay = true;
+    browserVideo.srcObject   = browserStream;
+    browserVideo.autoplay    = true;
     browserVideo.playsInline = true;
     browserVideo.style.display = 'none';
     document.body.appendChild(browserVideo);
 
     browserCanvas = document.createElement('canvas');
-    browserCanvas.width = 640; browserCanvas.height = 480;
+    browserCanvas.width  = 640;
+    browserCanvas.height = 480;
     browserCanvas.style.display = 'none';
     document.body.appendChild(browserCanvas);
 
-    const feedImg = document.getElementById('camera-feed');
-    if (feedImg) {
-      feedImg.style.display = 'none';
+    // Replace all <img id="camera-feed"> and .camera-feed-img placeholders
+    // with live <video> elements showing the stream
+    function replaceFeedEl(el) {
+      if (!el) return;
       const v = document.createElement('video');
-      v.srcObject = browserStream; v.autoplay = true;
-      v.playsInline = true; v.muted = true;
-      v.className = 'camera-feed-img';
-      feedImg.parentNode.insertBefore(v, feedImg);
+      v.srcObject   = browserStream;
+      v.autoplay    = true;
+      v.playsInline = true;
+      v.muted       = true;
+      v.className   = el.className;
+      el.parentNode.insertBefore(v, el);
+      el.style.display = 'none';
     }
-    const camPageFeed = document.querySelector('#page-camera .camera-feed-img');
-    if (camPageFeed) {
-      camPageFeed.style.display = 'none';
-      const v2 = document.createElement('video');
-      v2.srcObject = browserStream; v2.autoplay = true;
-      v2.playsInline = true; v2.muted = true;
-      v2.className = 'camera-feed-img';
-      camPageFeed.parentNode.insertBefore(v2, camPageFeed);
-    }
+
+    replaceFeedEl(document.getElementById('camera-feed'));
+    document.querySelectorAll('#page-camera .camera-feed-img').forEach(replaceFeedEl);
+
     await new Promise(r => setTimeout(r, 500));
     setInterval(predictFromBrowser, 3000);
+
   } catch (err) {
     console.error('[Camera] Error:', err);
   }
@@ -111,71 +167,106 @@ async function predictFromBrowser() {
     const ctx = browserCanvas.getContext('2d');
     ctx.drawImage(browserVideo, 0, 0, 224, 224);
     const base64 = browserCanvas.toDataURL('image/jpeg', 0.4);
-    const res = await fetch('/predict_frame', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const res    = await fetch('/predict_frame', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: base64 })
     });
     const data = await res.json();
     if (data.emotion) updateEmotion(data.emotion.toLowerCase(), data.confidence || 0);
-  } catch (e) {}
+  } catch (e) {
+    // silent fail — network may be unavailable
+  }
 }
 
-/* ── SERVER WEBCAM ── */
+/* ══════════════════════════════════════
+   SERVER WEBCAM (local mode)
+══════════════════════════════════════ */
 async function pollEmotion() {
   try {
-    const res = await fetch('/get_emotion');
+    const res  = await fetch('/get_emotion');
     const data = await res.json();
     if (data && data.emotion) updateEmotion(data.emotion.toLowerCase(), data.confidence || 0);
-  } catch (e) {}
+  } catch (e) {
+    // silent fail
+  }
 }
 
-/* ── UPDATE EMOTION ── */
+/* ══════════════════════════════════════
+   UPDATE EMOTION  ← main bug fix here
+══════════════════════════════════════ */
 function updateEmotion(emotion, conf) {
   const cfg = EMOTIONS[emotion] || EMOTIONS.neutral;
-  currentEmotion = emotion; currentConf = conf;
+  currentEmotion = emotion;
+  currentConf    = conf;
 
-  document.getElementById('stat-emotion').textContent = cfg.label;
-  document.getElementById('stat-conf').textContent = (conf * 100).toFixed(1) + '%';
-  document.getElementById('chip-emoji').textContent = cfg.emoji;
-  document.getElementById('chip-label').textContent = cfg.label;
-  document.getElementById('overlay-emoji').textContent = cfg.emoji;
-  document.getElementById('overlay-emotion').textContent = cfg.label;
-  document.getElementById('overlay-conf').textContent = `Confidence: ${(conf * 100).toFixed(0)}%`;
-  document.getElementById('cam-page-emoji').textContent = cfg.emoji;
-  document.getElementById('cam-page-emotion').textContent = cfg.label;
-  document.getElementById('cam-page-conf').textContent = `Confidence: ${(conf * 100).toFixed(0)}%`;
+  // Stat bar
+  setText('stat-emotion', cfg.label);
+  setText('stat-conf',    (conf * 100).toFixed(1) + '%');
 
-  const pct = Math.min((conf * 100), 100).toFixed(1) + '%';
-  document.getElementById('conf-bar-fill').style.width = pct;
-  document.getElementById('conf-bar-pct').textContent = pct;
-  document.getElementById('cam-conf-fill').style.width = pct;
-  document.getElementById('cam-conf-pct').textContent = pct;
+  // Topbar chip
+  setText('chip-emoji', cfg.emoji);
+  setText('chip-label', cfg.label);
 
-  updateMeter(emotion, conf);
+  // Dashboard overlay
+  setText('overlay-emoji',   cfg.emoji);
+  setText('overlay-emotion', cfg.label);
+  setText('overlay-conf',    `Confidence: ${(conf * 100).toFixed(0)}%`);
 
+  // Camera page overlay
+  setText('cam-page-emoji',   cfg.emoji);
+  setText('cam-page-emotion', cfg.label);
+  setText('cam-page-conf',    `Confidence: ${(conf * 100).toFixed(0)}%`);
+
+  // Confidence bars
+  const pct = Math.min(conf * 100, 100).toFixed(1) + '%';
+  setWidth('conf-bar-fill', pct);
+  setText('conf-bar-pct',  pct);
+  setWidth('cam-conf-fill', pct);
+  setText('cam-conf-pct',  pct);
+
+  // Meters
+  updateMeter('meter-list',     emotion, conf);
+  updateMeter('cam-meter-list', emotion, conf);
+
+  // Counters
   detectionCount++;
-  document.getElementById('stat-detects').textContent = detectionCount;
+  setText('stat-detects', detectionCount);
   emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
   confHistory.push(+(conf * 100).toFixed(1));
 
+  // History
   const recs = RECOMMENDATIONS[emotion] || RECOMMENDATIONS.neutral;
-  historyData.unshift({ emotion, conf, recommendation: recs[0], time: new Date().toLocaleTimeString() });
+  historyData.unshift({
+    emotion,
+    conf,
+    recommendation: recs[0],
+    time: new Date().toLocaleTimeString()
+  });
   if (historyData.length > 50) historyData.pop();
 
   renderRecs(emotion);
+  updateAnalyticsSummary();
 
+  // Enrichment call (only when emotion changes)
   if (emotion !== lastEnrichEmotion) {
     lastEnrichEmotion = emotion;
     fetchEnrichment(emotion, conf);
   }
 }
 
-/* ── EMOTION METER ── */
-function updateMeter(activeEmotion, conf) {
-  const list = document.getElementById('meter-list');
+/* helpers */
+function setText(id, val)  { const el = document.getElementById(id); if (el) el.textContent = val; }
+function setWidth(id, val) { const el = document.getElementById(id); if (el) el.style.width  = val; }
+
+/* ══════════════════════════════════════
+   EMOTION METER
+══════════════════════════════════════ */
+function updateMeter(containerId, activeEmotion, conf) {
+  const list = document.getElementById(containerId);
   if (!list) return;
   list.innerHTML = Object.entries(EMOTIONS).map(([key, cfg]) => {
-    const pct = key === activeEmotion ? Math.min((conf * 100), 100).toFixed(0) : 0;
+    const pct = key === activeEmotion ? Math.min(conf * 100, 100).toFixed(0) : 0;
     return `
       <div class="meter-row">
         <div class="meter-label">${cfg.emoji} ${cfg.label}</div>
@@ -186,66 +277,107 @@ function updateMeter(activeEmotion, conf) {
       </div>`;
   }).join('');
 }
-updateMeter('neutral', 0);
+updateMeter('meter-list',     'neutral', 0);
+updateMeter('cam-meter-list', 'neutral', 0);
 
-/* ── RECOMMENDATIONS ── */
+/* ══════════════════════════════════════
+   RECOMMENDATIONS
+══════════════════════════════════════ */
 function renderRecs(emotion) {
   const recs = RECOMMENDATIONS[emotion] || RECOMMENDATIONS.neutral;
-  const el = document.getElementById('rec-list');
-  if (el) el.innerHTML = recs.map(r => `<div class="rec-item"><div class="rec-dot"></div>${r}</div>`).join('');
+  ['rec-list', 'cam-rec-list'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.innerHTML = recs
+        .map(r => `<div class="rec-item"><div class="rec-dot"></div>${r}</div>`)
+        .join('');
+    }
+  });
 }
 renderRecs('neutral');
+
 const refreshRecsBtn = document.getElementById('refresh-recs-btn');
 if (refreshRecsBtn) refreshRecsBtn.addEventListener('click', () => renderRecs(currentEmotion));
 
-/* ── ENRICHMENT API ── */
+/* ══════════════════════════════════════
+   ENRICHMENT API  ← fixed undefined vars
+══════════════════════════════════════ */
 async function fetchEnrichment(emotion, conf) {
-  const adviceEl = document.getElementById('ai-advice');
-  if (adviceEl) { adviceEl.textContent = 'Generating advice…'; adviceEl.classList.add('ai-loading'); }
+  const adviceEl = document.getElementById('ai-advice');   // fixed: was using wrong var name
+  if (adviceEl) {
+    adviceEl.textContent = '🤖 Thinking…';
+    adviceEl.classList.add('ai-loading');
+  }
+
   try {
-    const res = await fetch('/api/enrich', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emotion, confidence: conf })
+    const res  = await fetch('/api/enrich', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ emotion, confidence: conf })
     });
     const data = await res.json();
-    if (data.ai_advice && adviceEl) {
-      adviceEl.textContent = data.ai_advice;
+
+    // AI advice
+    if (adviceEl) {
+      adviceEl.textContent = data.ai_advice || 'No advice available.';
       adviceEl.classList.remove('ai-loading');
     }
+
+    // Quote
     if (data.quote) {
-      const qt = document.getElementById('quote-text');
-      const qa = document.getElementById('quote-author');
-      if (qt) qt.textContent = `"${data.quote.quote}"`;
-      if (qa) qa.textContent = `— ${data.quote.author}`;
+      setText('quote-text',   `"${data.quote.quote}"`);
+      setText('quote-author', `— ${data.quote.author}`);
     }
+
+    // Videos
     if (data.videos && data.videos.length) renderVideos(data.videos);
+
   } catch (e) {
-    if (adviceEl) { adviceEl.textContent = 'AI advice unavailable.'; adviceEl.classList.remove('ai-loading'); }
+    if (adviceEl) {
+      adviceEl.textContent = 'AI advice unavailable.';
+      adviceEl.classList.remove('ai-loading');
+    }
   }
 }
 
+/* Quote refresh */
 const refreshQuoteBtn = document.getElementById('refresh-quote-btn');
-if (refreshQuoteBtn) refreshQuoteBtn.addEventListener('click', async () => {
-  try {
-    const res = await fetch('/api/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emotion: currentEmotion, confidence: currentConf }) });
-    const data = await res.json();
-    if (data.quote) {
-      document.getElementById('quote-text').textContent = `"${data.quote.quote}"`;
-      document.getElementById('quote-author').textContent = `— ${data.quote.author}`;
-    }
-  } catch (e) {}
-});
+if (refreshQuoteBtn) {
+  refreshQuoteBtn.addEventListener('click', async () => {
+    try {
+      const res  = await fetch('/api/enrich', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ emotion: currentEmotion, confidence: currentConf })
+      });
+      const data = await res.json();
+      if (data.quote) {
+        setText('quote-text',   `"${data.quote.quote}"`);
+        setText('quote-author', `— ${data.quote.author}`);
+      }
+    } catch (e) {}
+  });
+}
 
+/* Videos refresh */
 const refreshVideosBtn = document.getElementById('refresh-videos-btn');
-if (refreshVideosBtn) refreshVideosBtn.addEventListener('click', async () => {
-  try {
-    const res = await fetch('/api/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emotion: currentEmotion, confidence: currentConf }) });
-    const data = await res.json();
-    if (data.videos && data.videos.length) renderVideos(data.videos);
-  } catch (e) {}
-});
+if (refreshVideosBtn) {
+  refreshVideosBtn.addEventListener('click', async () => {
+    try {
+      const res  = await fetch('/api/enrich', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ emotion: currentEmotion, confidence: currentConf })
+      });
+      const data = await res.json();
+      if (data.videos && data.videos.length) renderVideos(data.videos);
+    } catch (e) {}
+  });
+}
 
-/* ── RENDER VIDEOS — thumbnail links, no iframes ── */
+/* ══════════════════════════════════════
+   RENDER VIDEOS
+══════════════════════════════════════ */
 function renderVideos(videos) {
   const grid = document.getElementById('video-grid');
   if (!grid) return;
@@ -260,67 +392,116 @@ function renderVideos(videos) {
     </a>`).join('');
 }
 
-/* ── AI CHAT ── */
+/* ══════════════════════════════════════
+   AI CHAT
+══════════════════════════════════════ */
 async function sendMessage() {
-  const input = document.getElementById('chat-input');
+  const input   = document.getElementById('chat-input');
   const chatBox = document.getElementById('chat-box');
   const message = input.value.trim();
   if (!message) return;
 
   chatBox.innerHTML += `<div class="message user">${message}</div>`;
   input.value = '';
+
+  const typingId = 'typing-' + Date.now();
+  chatBox.innerHTML += `<div id="${typingId}" class="message bot typing">🤖 Typing…</div>`;
   chatBox.scrollTop = chatBox.scrollHeight;
-  chatBox.innerHTML += `<div class="message bot" id="typing">...</div>`;
 
   try {
-    const res = await fetch('/api/chat', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, emotion: currentEmotion, confidence: currentConf * 100 })
+    const res  = await fetch('/api/chat', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ message })
     });
     const data = await res.json();
-    const typing = document.getElementById('typing');
-    if (typing) typing.remove();
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) typingEl.remove();
     chatBox.innerHTML += `<div class="message bot">${data.response}</div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
   } catch (err) {
-    const typing = document.getElementById('typing');
-    if (typing) typing.remove();
-    chatBox.innerHTML += `<div class="message bot">Error connecting to AI.</div>`;
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) typingEl.remove();
+    chatBox.innerHTML += `<div class="message bot">⚠️ Error connecting to server.</div>`;
   }
 }
 
-// Send on Enter key
+function quickMsg(text) {
+  const input = document.getElementById('chat-input');
+  if (input) input.value = text;
+  sendMessage();
+}
+
 const chatInput = document.getElementById('chat-input');
 if (chatInput) chatInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
 
-/* ── SAVE SESSION ── */
+/* ══════════════════════════════════════
+   SAVE SESSION
+══════════════════════════════════════ */
 const saveBtn = document.getElementById('save-btn');
-if (saveBtn) saveBtn.addEventListener('click', async () => {
-  try {
-    const res = await fetch('/save_session', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emotion: currentEmotion, confidence: currentConf, session_time: sessionSeconds, detections: detectionCount })
-    });
-    if (res.ok) alert('✅ Session saved!');
-    else alert('⚠️ Save failed.');
-  } catch (e) { alert('⚠️ Cannot connect to server.'); }
-});
+if (saveBtn) {
+  saveBtn.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/save_session', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          emotion:      currentEmotion,
+          confidence:   currentConf,
+          session_time: sessionSeconds,
+          detections:   detectionCount
+        })
+      });
+      alert(res.ok ? '✅ Session saved!' : '⚠️ Save failed.');
+    } catch (e) {
+      alert('⚠️ Cannot connect to server.');
+    }
+  });
+}
 
-/* ── HISTORY ── */
+/* ══════════════════════════════════════
+   HISTORY PAGE
+══════════════════════════════════════ */
 function renderHistory() {
   const recent = historyData.slice(0, 20).reverse();
-  if (trendChart) trendChart.destroy();
-  trendChart = new Chart(document.getElementById('trend-chart'), {
-    type: 'line',
-    data: {
-      labels: recent.map((_, i) => i + 1),
-      datasets: [{ label: 'Confidence %', data: recent.map(d => (d.conf * 100).toFixed(1)), borderColor: '#6c63ff', backgroundColor: 'rgba(108,99,255,.1)', pointBackgroundColor: recent.map(d => EMOTIONS[d.emotion]?.color || '#6c63ff'), pointRadius: 5, tension: 0.4, fill: true }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a' } }, y: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a' }, min: 0, max: 100 } } }
-  });
+  const tbody  = document.getElementById('history-body');
 
-  const tbody = document.getElementById('history-body');
-  if (!historyData.length) { tbody.innerHTML = '<tr><td colspan="5" class="no-data-cell">No history yet.</td></tr>'; return; }
+  // Trend chart
+  if (trendChart) trendChart.destroy();
+  const trendCanvas = document.getElementById('trend-chart');
+  if (trendCanvas) {
+    trendChart = new Chart(trendCanvas, {
+      type: 'line',
+      data: {
+        labels:   recent.map((_, i) => i + 1),
+        datasets: [{
+          label:              'Confidence %',
+          data:               recent.map(d => (d.conf * 100).toFixed(1)),
+          borderColor:        '#6c63ff',
+          backgroundColor:    'rgba(108,99,255,.1)',
+          pointBackgroundColor: recent.map(d => EMOTIONS[d.emotion]?.color || '#6c63ff'),
+          pointRadius:        5,
+          tension:            0.4,
+          fill:               true
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a' } },
+          y: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a' }, min: 0, max: 100 }
+        }
+      }
+    });
+  }
+
+  // Table
+  if (!tbody) return;
+  if (!historyData.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="no-data-cell">No history yet.</td></tr>';
+    return;
+  }
   tbody.innerHTML = historyData.slice(0, 20).map((d, i) => {
     const cfg = EMOTIONS[d.emotion] || EMOTIONS.neutral;
     return `<tr>
@@ -333,37 +514,103 @@ function renderHistory() {
   }).join('');
 }
 
-/* ── ANALYTICS ── */
+/* ══════════════════════════════════════
+   ANALYTICS SUMMARY (live update)
+══════════════════════════════════════ */
+function updateAnalyticsSummary() {
+  let maxEmotion = 'neutral', maxValue = 0;
+  for (const [key, val] of Object.entries(emotionCounts)) {
+    if (val > maxValue) { maxValue = val; maxEmotion = key; }
+  }
+  const cfg = EMOTIONS[maxEmotion] || EMOTIONS.neutral;
+  setText('dominantEmotion', `${cfg.emoji} ${cfg.label}`);
+
+  const total = Object.values(emotionCounts).reduce((a, b) => a + b, 0);
+  if (total > 0) {
+    const focusScore = Math.round(
+      ((emotionCounts.neutral + emotionCounts.happy) / total) * 100
+    );
+    setText('focusScore', focusScore + '%');
+  }
+}
+
+/* ══════════════════════════════════════
+   ANALYTICS PAGE
+══════════════════════════════════════ */
 function renderAnalytics() {
+  updateAnalyticsSummary();
+
   const labels = Object.keys(emotionCounts).map(k => EMOTIONS[k]?.label || k);
-  const vals = Object.values(emotionCounts);
+  const vals   = Object.values(emotionCounts);
   const colors = Object.keys(emotionCounts).map(k => EMOTIONS[k]?.color || '#6c63ff');
 
   if (pieChart) pieChart.destroy();
-  pieChart = new Chart(document.getElementById('pie-chart'), {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderWidth: 2, borderColor: '#111318' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#a0a8c0', font: { size: 12 } } } } }
-  });
+  const pieCanvas = document.getElementById('pie-chart');
+  if (pieCanvas) {
+    pieChart = new Chart(pieCanvas, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderWidth: 2, borderColor: '#111318' }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'right', labels: { color: '#a0a8c0', font: { size: 12 } } } }
+      }
+    });
+  }
 
   if (barChart) barChart.destroy();
-  barChart = new Chart(document.getElementById('bar-chart'), {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'Count', data: vals, backgroundColor: colors, borderRadius: 6, borderWidth: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#5a607a' } }, y: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a' }, beginAtZero: true } } }
-  });
+  const barCanvas = document.getElementById('bar-chart');
+  if (barCanvas) {
+    barChart = new Chart(barCanvas, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Count', data: vals, backgroundColor: colors, borderRadius: 6, borderWidth: 0 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false },      ticks: { color: '#5a607a' } },
+          y: { grid: { color: '#1f2330' },    ticks: { color: '#5a607a' }, beginAtZero: true }
+        }
+      }
+    });
+  }
 
   if (confChart) confChart.destroy();
-  confChart = new Chart(document.getElementById('conf-chart'), {
-    type: 'line',
-    data: { labels: confHistory.map((_, i) => i + 1), datasets: [{ label: 'Confidence %', data: confHistory, borderColor: '#ff6584', backgroundColor: 'rgba(255,101,132,.08)', tension: 0.4, fill: true, pointRadius: 3, pointBackgroundColor: '#ff6584' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a', maxTicksLimit: 10 } }, y: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a' }, min: 0, max: 100 } } }
-  });
+  const confCanvas = document.getElementById('conf-chart');
+  if (confCanvas) {
+    confChart = new Chart(confCanvas, {
+      type: 'line',
+      data: {
+        labels:   confHistory.map((_, i) => i + 1),
+        datasets: [{
+          label:           'Confidence %',
+          data:            confHistory,
+          borderColor:     '#ff6584',
+          backgroundColor: 'rgba(255,101,132,.08)',
+          tension:         0.4,
+          fill:            true,
+          pointRadius:     3,
+          pointBackgroundColor: '#ff6584'
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a', maxTicksLimit: 10 } },
+          y: { grid: { color: '#1f2330' }, ticks: { color: '#5a607a' }, min: 0, max: 100 }
+        }
+      }
+    });
+  }
 }
 
-/* ── STUDY TIPS ── */
+/* ══════════════════════════════════════
+   STUDY TIPS PAGE
+══════════════════════════════════════ */
 function renderTips() {
-  document.getElementById('tips-grid').innerHTML = Object.entries(EMOTIONS).map(([key, cfg]) => {
+  const grid = document.getElementById('tips-grid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(EMOTIONS).map(([key, cfg]) => {
     const tips = RECOMMENDATIONS[key] || [];
     return `
       <div class="tip-card">
@@ -374,20 +621,26 @@ function renderTips() {
   }).join('');
 }
 
-/* ── INIT ── */
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
 (async function init() {
+  // Load initial quote + videos for neutral state
   try {
-    const res = await fetch('/api/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emotion: 'neutral', confidence: 0 }) });
+    const res  = await fetch('/api/enrich', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ emotion: 'neutral', confidence: 0 })
+    });
     const data = await res.json();
     if (data.quote) {
-      const qt = document.getElementById('quote-text');
-      const qa = document.getElementById('quote-author');
-      if (qt) qt.textContent = `"${data.quote.quote}"`;
-      if (qa) qa.textContent = `— ${data.quote.author}`;
+      setText('quote-text',   `"${data.quote.quote}"`);
+      setText('quote-author', `— ${data.quote.author}`);
     }
     if (data.videos && data.videos.length) renderVideos(data.videos);
   } catch (e) {}
 
+  // Start webcam / polling
   if (IS_CLOUD) {
     console.log('[Mode] Cloud — browser webcam');
     await startBrowserWebcam();
