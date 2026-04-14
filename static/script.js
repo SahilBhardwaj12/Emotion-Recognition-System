@@ -99,7 +99,7 @@ async function startBrowserWebcam() {
       camPageFeed.parentNode.insertBefore(v2, camPageFeed);
     }
     await new Promise(r => setTimeout(r, 500));
-    setInterval(predictFromBrowser, 2000);
+    setInterval(predictFromBrowser, 3000);
   } catch (err) {
     console.error('[Camera] Error:', err);
   }
@@ -109,8 +109,8 @@ async function predictFromBrowser() {
   if (!browserVideo || !browserCanvas) return;
   try {
     const ctx = browserCanvas.getContext('2d');
-    ctx.drawImage(browserVideo, 0, 0, 640, 480);
-    const base64 = browserCanvas.toDataURL('image/jpeg', 0.8);
+    ctx.drawImage(browserVideo, 0, 0, 224, 224);
+    const base64 = browserCanvas.toDataURL('image/jpeg', 0.4);
     const res = await fetch('/predict_frame', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: base64 })
